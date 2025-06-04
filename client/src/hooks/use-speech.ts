@@ -30,11 +30,11 @@ export function useSpeech(options: UseSpeechOptions = {}) {
     const utterance = new SpeechSynthesisUtterance(text);
     utteranceRef.current = utterance;
 
-    // Apply options
+    // Apply options for more natural American English
     utterance.lang = customOptions?.lang || options.lang || 'en-US';
-    utterance.rate = customOptions?.rate || options.rate || 0.8;
-    utterance.pitch = customOptions?.pitch || options.pitch || 1;
-    utterance.volume = customOptions?.volume || options.volume || 1;
+    utterance.rate = customOptions?.rate || options.rate || 0.9;
+    utterance.pitch = customOptions?.pitch || options.pitch || 1.1;
+    utterance.volume = customOptions?.volume || options.volume || 0.9;
 
     utterance.onstart = () => setIsPlaying(true);
     utterance.onend = () => setIsPlaying(false);

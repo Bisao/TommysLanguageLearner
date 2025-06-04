@@ -18,7 +18,7 @@ const avatars: Avatar[] = [
   {
     id: 'grammar',
     name: 'Professor James',
-    role: 'Grammar Specialist',
+    role: 'Especialista em Gramática',
     specialty: 'Simple Present Tense',
     icon: <GraduationCap className="h-8 w-8" />,
     color: 'bg-blue-600',
@@ -27,8 +27,8 @@ const avatars: Avatar[] = [
   {
     id: 'vocabulary',
     name: 'Teacher Sarah',
-    role: 'Vocabulary Expert',
-    specialty: 'Word Building',
+    role: 'Especialista em Vocabulário',
+    specialty: 'Construção de Palavras',
     icon: <BookOpen className="h-8 w-8" />,
     color: 'bg-emerald-600',
     intro: 'Hi there! I\'m Teacher Sarah. I\'ll help you learn new words and their meanings. Let\'s expand your vocabulary!'
@@ -36,8 +36,8 @@ const avatars: Avatar[] = [
   {
     id: 'conversation',
     name: 'Coach Maria',
-    role: 'Conversation Coach',
-    specialty: 'Speaking Practice',
+    role: 'Treinadora de Conversação',
+    specialty: 'Prática de Conversação',
     icon: <MessageCircle className="h-8 w-8" />,
     color: 'bg-amber-600',
     intro: 'Welcome! I\'m Coach Maria. I\'ll help you practice speaking and having conversations in English. Let\'s talk!'
@@ -54,7 +54,7 @@ export function InteractiveAvatar({ onStartLesson }: InteractiveAvatarProps) {
 
   const handleAvatarClick = (avatar: Avatar) => {
     setActiveAvatar(avatar.id);
-    speak(avatar.intro);
+    speak(avatar.intro, { rate: 0.85, pitch: 1.0 });
   };
 
   const handleStartLesson = (avatarId: string) => {
@@ -63,7 +63,7 @@ export function InteractiveAvatar({ onStartLesson }: InteractiveAvatarProps) {
 
   return (
     <section className="mb-12">
-      <h3 className="text-2xl font-bold text-gray-900 mb-6">Meet Your Teachers</h3>
+      <h3 className="text-2xl font-bold text-gray-900 mb-6">Conheça Seus Professores</h3>
       <div className="grid md:grid-cols-3 gap-6">
         {avatars.map((avatar) => (
           <Card 
@@ -94,7 +94,7 @@ export function InteractiveAvatar({ onStartLesson }: InteractiveAvatarProps) {
                   onClick={() => handleStartLesson(avatar.id)}
                 >
                   <Play className="h-4 w-4 mr-2" />
-                  Start with {avatar.name}
+                  Começar com {avatar.name}
                 </Button>
                 
                 <Button
@@ -105,7 +105,7 @@ export function InteractiveAvatar({ onStartLesson }: InteractiveAvatarProps) {
                   disabled={isPlaying && activeAvatar === avatar.id}
                 >
                   <Volume2 className="h-4 w-4 mr-2" />
-                  {isPlaying && activeAvatar === avatar.id ? 'Speaking...' : 'Listen to Intro'}
+                  {isPlaying && activeAvatar === avatar.id ? 'Falando...' : 'Ouvir Apresentação'}
                 </Button>
               </div>
             </CardContent>
