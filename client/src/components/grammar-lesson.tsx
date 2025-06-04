@@ -34,9 +34,9 @@ export function GrammarLesson({ showTranslations }: GrammarLessonProps) {
         <CardContent>
           <Tabs defaultValue="formation" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="formation">Formation</TabsTrigger>
-              <TabsTrigger value="negative">Negative</TabsTrigger>
-              <TabsTrigger value="questions">Questions</TabsTrigger>
+              <TabsTrigger value="formation">Formação</TabsTrigger>
+              <TabsTrigger value="negative">Negativo</TabsTrigger>
+              <TabsTrigger value="questions">Perguntas</TabsTrigger>
             </TabsList>
             
             {grammarRules.map((rule) => (
@@ -63,7 +63,7 @@ export function GrammarLesson({ showTranslations }: GrammarLessonProps) {
                 </div>
 
                 <div className="space-y-4">
-                  <h4 className="text-lg font-semibold text-gray-800">Examples:</h4>
+                  <h4 className="text-lg font-semibold text-gray-800">Exemplos:</h4>
                   {rule.examples.map((example, index) => (
                     <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center justify-between">
@@ -92,10 +92,10 @@ export function GrammarLesson({ showTranslations }: GrammarLessonProps) {
                     {completedRules.has(rule.id) ? (
                       <span className="flex items-center text-green-600">
                         <CheckCircle className="h-4 w-4 mr-1" />
-                        Completed
+                        Concluído
                       </span>
                     ) : (
-                      'Listen to all examples to complete this lesson'
+                      'Ouça todos os exemplos para completar esta lição'
                     )}
                   </div>
                   <Button
@@ -103,7 +103,7 @@ export function GrammarLesson({ showTranslations }: GrammarLessonProps) {
                     disabled={completedRules.has(rule.id)}
                     className="academy-button-blue"
                   >
-                    {completedRules.has(rule.id) ? 'Completed' : 'Mark Complete'}
+                    {completedRules.has(rule.id) ? 'Concluído' : 'Marcar Completo'}
                   </Button>
                 </div>
               </TabsContent>

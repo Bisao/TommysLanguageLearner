@@ -58,22 +58,22 @@ export function VocabularySection({ showTranslations }: VocabularySectionProps) 
   const getStatusText = (status?: string) => {
     switch (status) {
       case 'known':
-        return 'Known';
+        return 'Conhecido';
       case 'mastered':
-        return 'Mastered';
+        return 'Dominado';
       default:
-        return 'Learning';
+        return 'Aprendendo';
     }
   };
 
   return (
     <section id="vocabulary" className="mb-12">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-2xl font-bold text-gray-900">Module 1 Vocabulary</h3>
+        <h3 className="text-2xl font-bold text-gray-900">Vocabulário do Módulo 1</h3>
         <div className="flex items-center gap-4 text-sm text-gray-600">
-          <span>Known: {Object.values(vocabularyStatus).filter(s => s === 'known').length}</span>
-          <span>Mastered: {Object.values(vocabularyStatus).filter(s => s === 'mastered').length}</span>
-          <span>Studying: {studyList.size}</span>
+          <span>Conhecido: {Object.values(vocabularyStatus).filter(s => s === 'known').length}</span>
+          <span>Dominado: {Object.values(vocabularyStatus).filter(s => s === 'mastered').length}</span>
+          <span>Estudando: {studyList.size}</span>
         </div>
       </div>
 

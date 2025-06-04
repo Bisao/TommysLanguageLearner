@@ -75,7 +75,7 @@ export function ConversationPractice({ showTranslations }: ConversationPracticeP
 
   return (
     <section id="conversation" className="mb-12">
-      <h3 className="text-2xl font-bold text-gray-900 mb-6">Conversation Practice</h3>
+      <h3 className="text-2xl font-bold text-gray-900 mb-6">Prática de Conversação</h3>
       
       <div className="grid lg:grid-cols-2 gap-8">
         {/* Question Section */}
