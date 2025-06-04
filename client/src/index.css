@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 216 21% 96%; /* #f1f5f9 */
+  --foreground: 222 84% 5%; /* #0f172a */
+  --card: 0 0% 100%; /* #ffffff */
+  --card-foreground: 222 84% 5%; /* #0f172a */
+  --popover: 0 0% 100%; /* #ffffff */
+  --popover-foreground: 222 84% 5%; /* #0f172a */
+  --primary: 221 83% 53%; /* #3b82f6 */
+  --primary-foreground: 210 40% 98%; /* #f8fafc */
+  --secondary: 210 40% 96%; /* #f1f5f9 */
+  --secondary-foreground: 222 47% 11%; /* #1e293b */
+  --muted: 210 40% 96%; /* #f1f5f9 */
+  --muted-foreground: 215 16% 47%; /* #64748b */
+  --accent: 210 40% 96%; /* #f1f5f9 */
+  --accent-foreground: 222 47% 11%; /* #1e293b */
+  --destructive: 0 84% 60%; /* #ef4444 */
+  --destructive-foreground: 210 40% 98%; /* #f8fafc */
+  --border: 214 32% 91%; /* #e2e8f0 */
+  --input: 214 32% 91%; /* #e2e8f0 */
+  --ring: 221 83% 53%; /* #3b82f6 */
+  --radius: 0.5rem;
+  
+  /* Tommy's Academy Colors */
+  --academy-blue: 221 83% 53%; /* #3b82f6 */
+  --academy-red: 0 84% 60%; /* #ef4444 */
+  --academy-green: 142 76% 36%; /* #10b981 */
+  --academy-orange: 43 96% 56%; /* #f59e0b */
+  --academy-navy: 217 91% 60%; /* #1e40af */
+}
+
+.dark {
+  --background: 222 84% 5%; /* #0f172a */
+  --foreground: 210 40% 98%; /* #f8fafc */
+  --card: 222 84% 5%; /* #0f172a */
+  --card-foreground: 210 40% 98%; /* #f8fafc */
+  --popover: 222 84% 5%; /* #0f172a */
+  --popover-foreground: 210 40% 98%; /* #f8fafc */
+  --primary: 217 91% 60%; /* #1e40af */
+  --primary-foreground: 222 84% 5%; /* #0f172a */
+  --secondary: 217 32% 17%; /* #1e293b */
+  --secondary-foreground: 210 40% 98%; /* #f8fafc */
+  --muted: 217 32% 17%; /* #1e293b */
+  --muted-foreground: 215 20% 65%; /* #94a3b8 */
+  --accent: 217 32% 17%; /* #1e293b */
+  --accent-foreground: 210 40% 98%; /* #f8fafc */
+  --destructive: 0 63% 31%; /* #991b1b */
+  --destructive-foreground: 210 40% 98%; /* #f8fafc */
+  --border: 217 32% 17%; /* #1e293b */
+  --input: 217 32% 17%; /* #1e293b */
+  --ring: 224 71% 4%; /* #1e293b */
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer components {
+  .academy-button-blue {
+    @apply bg-blue-600 hover:bg-blue-700 text-white;
+  }
+  
+  .academy-button-red {
+    @apply bg-red-600 hover:bg-red-700 text-white;
+  }
+  
+  .academy-button-green {
+    @apply bg-emerald-600 hover:bg-emerald-700 text-white;
+  }
+  
+  .academy-button-orange {
+    @apply bg-amber-600 hover:bg-amber-700 text-white;
+  }
+  
+  .academy-gradient {
+    @apply bg-gradient-to-r from-blue-600 to-indigo-700;
+  }
+  
+  .audio-playing {
+    @apply animate-pulse;
+  }
+  
+  .word-card {
+    @apply transition-all duration-200 hover:scale-105 hover:shadow-md;
+  }
+  
+  .avatar-pulse {
+    @apply animate-bounce;
+  }
+}
