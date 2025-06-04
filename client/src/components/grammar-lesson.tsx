@@ -28,7 +28,7 @@ export function GrammarLesson({ showTranslations }: GrammarLessonProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BookOpen className="h-6 w-6 text-blue-600" />
-            Simple Present Tense - Grammar Rules
+            Simple Present Tense - Regras de Gramática
           </CardTitle>
         </CardHeader>
         <CardContent>
