@@ -19,8 +19,12 @@ export function Header({ progress, onToggleTranslation, showTranslations }: Head
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
               {/* Tommy's Academy Logo */}
-              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">TA</span>
+              <div className="w-10 h-10 rounded-full overflow-hidden">
+                <img 
+                  src="/attached_assets/image_1749013119390.png" 
+                  alt="Tommy's Academy Logo" 
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Tommy's Academy</h1>

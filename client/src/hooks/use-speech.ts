@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 interface UseSpeechOptions {
   lang?: string;
@@ -13,7 +13,7 @@ export function useSpeech(options: UseSpeechOptions = {}) {
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   // Check if speech synthesis is supported
-  React.useEffect(() => {
+  useEffect(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       setIsSupported(true);
     }
@@ -79,9 +79,9 @@ export function useSpeechRecognition() {
   const [isSupported, setIsSupported] = useState(false);
   const recognitionRef = useRef<any>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (typeof window !== 'undefined') {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         setIsSupported(true);
         recognitionRef.current = new SpeechRecognition();
