@@ -67,6 +67,51 @@ export default function ReadingLesson({
     }
   }, [speak, isSupported]);
 
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startGuidedReading = useCallback(() => {
+    let wordIndex = 0;
+
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearTimeout(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    const readNextWord = () => {
+      // Check if we should continue reading
+      if (wordIndex >= allWords.length) {
+        setIsPlaying(false);
+        setCurrentWordIndex(-1);
+        intervalRef.current = null;
+        return;
+      }
+
+      // Update current word and speak it
+      setCurrentWordIndex(wordIndex);
+      speak(allWords[wordIndex], {
+        rate: 0.8,
+        pitch: 1.0,
+        volume: 0.8
+      });
+
+      setCompletedWords(prev => new Set(prev).add(wordIndex));
+
+      // Move to next word
+      wordIndex++;
+
+      // Schedule next word with dynamic timing
+      const wordLength = allWords[wordIndex - 1]?.length || 4;
+      const timing = Math.max(1200, wordLength * 180 + 600);
+
+      intervalRef.current = setTimeout(readNextWord, timing);
+    };
+
+    // Start reading immediately
+    readNextWord();
+  }, [allWords, speak]);
+
+
   const handlePlayPause = useCallback(() => {
     if (isPlaying) {
       // Stop current playback
@@ -92,50 +137,6 @@ export default function ReadingLesson({
       }
     }
   }, [isPlaying, readingMode, text, speak, stopSpeaking, startGuidedReading]);
-
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const startGuidedReading = useCallback(() => {
-    let wordIndex = 0;
-    
-    // Clear any existing interval
-    if (intervalRef.current) {
-      clearTimeout(intervalRef.current);
-      intervalRef.current = null;
-    }
-    
-    const readNextWord = () => {
-      // Check if we should continue reading
-      if (wordIndex >= allWords.length) {
-        setIsPlaying(false);
-        setCurrentWordIndex(-1);
-        intervalRef.current = null;
-        return;
-      }
-      
-      // Update current word and speak it
-      setCurrentWordIndex(wordIndex);
-      speak(allWords[wordIndex], {
-        rate: 0.8,
-        pitch: 1.0,
-        volume: 0.8
-      });
-      
-      setCompletedWords(prev => new Set(prev).add(wordIndex));
-      
-      // Move to next word
-      wordIndex++;
-      
-      // Schedule next word with dynamic timing
-      const wordLength = allWords[wordIndex - 1]?.length || 4;
-      const timing = Math.max(1200, wordLength * 180 + 600);
-      
-      intervalRef.current = setTimeout(readNextWord, timing);
-    };
-    
-    // Start reading immediately
-    readNextWord();
-  }, [allWords, speak]);
 
   // Cleanup interval on unmount
   useEffect(() => {
@@ -164,7 +165,7 @@ export default function ReadingLesson({
       clearTimeout(intervalRef.current);
       intervalRef.current = null;
     }
-    
+
     // Reset all states
     setIsPlaying(false);
     setCurrentWordIndex(-1);
