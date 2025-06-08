@@ -37,12 +37,12 @@ export function ExerciseSection({ onExerciseComplete }: ExerciseSectionProps) {
   const checkAnswer = (exerciseId: string) => {
     const exercise = exercises.find(ex => ex.id === exerciseId);
     const selectedAnswer = selectedAnswers[exerciseId];
-    
+
     if (!exercise || !selectedAnswer) return;
 
     const isCorrect = selectedAnswer === exercise.correctAnswer;
     const timeSpent = Math.round((Date.now() - startTime) / 1000);
-    
+
     const result: ExerciseResult = {
       exerciseId,
       selectedAnswer,
@@ -84,25 +84,25 @@ export function ExerciseSection({ onExerciseComplete }: ExerciseSectionProps) {
     const isSelected = selectedAnswers[exerciseId] === option;
     const showResult = showResults[exerciseId];
     const isCorrect = isAnswerCorrect(exerciseId, option);
-    
+
     if (!showResult) {
       return isSelected 
         ? 'border-blue-500 bg-blue-50 text-blue-700' 
         : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50';
     }
-    
+
     if (isSelected && isCorrect) {
       return 'border-green-500 bg-green-50 text-green-700';
     }
-    
+
     if (isSelected && !isCorrect) {
       return 'border-red-500 bg-red-50 text-red-700';
     }
-    
+
     if (!isSelected && isCorrect) {
       return 'border-green-500 bg-green-50 text-green-700';
     }
-    
+
     return 'border-gray-300 text-gray-500';
   };
 
@@ -195,7 +195,7 @@ export function ExerciseSection({ onExerciseComplete }: ExerciseSectionProps) {
                 'Select an answer'
               )}
             </div>
-            
+
             <div className="flex gap-2">
               {!showResults[currentExercise.id] && selectedAnswers[currentExercise.id] && (
                 <Button
@@ -205,7 +205,7 @@ export function ExerciseSection({ onExerciseComplete }: ExerciseSectionProps) {
                   Check Answer
                 </Button>
               )}
-              
+
               {showResults[currentExercise.id] && currentExerciseIndex < exercises.length - 1 && (
                 <Button
                   onClick={goToNextExercise}

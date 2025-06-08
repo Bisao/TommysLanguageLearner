@@ -277,6 +277,42 @@
   }
 }
 
+/* Responsive text utilities */
+.text-responsive-xs { @apply text-xs sm:text-sm; }
+.text-responsive-sm { @apply text-sm sm:text-base; }
+.text-responsive-base { @apply text-base sm:text-lg; }
+.text-responsive-lg { @apply text-lg sm:text-xl; }
+.text-responsive-xl { @apply text-xl sm:text-2xl; }
+.text-responsive-2xl { @apply text-2xl sm:text-3xl; }
+
+/* Responsive padding utilities */
+.p-responsive { @apply p-3 sm:p-4 lg:p-6; }
+.px-responsive { @apply px-3 sm:px-4 lg:px-6; }
+.py-responsive { @apply py-3 sm:py-4 lg:py-6; }
+
+/* Responsive spacing utilities */
+.space-y-responsive > * + * { @apply mt-3 sm:mt-4 lg:mt-6; }
+.gap-responsive { @apply gap-2 sm:gap-3 lg:gap-4; }
+
+/* Responsive grid utilities */
+.grid-responsive-2 { @apply grid-cols-1 sm:grid-cols-2; }
+.grid-responsive-3 { @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3; }
+.grid-responsive-4 { @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4; }
+
+/* Modal responsive improvements */
+.modal-responsive {
+  @apply w-full max-w-xs sm:max-w-md md:max-w-2xl lg:max-w-4xl;
+  @apply max-h-[95vh] sm:max-h-[90vh];
+  @apply mx-2 sm:mx-4;
+}
+
+/* Button responsive improvements */
+.btn-responsive {
+  @apply py-2 sm:py-3 px-3 sm:px-4 lg:px-6;
+  @apply text-sm sm:text-base;
+  @apply touch-target;
+}
+
 /* Better mobile button spacing */
 .mobile-button-group button {
   margin: 8px 4px;
