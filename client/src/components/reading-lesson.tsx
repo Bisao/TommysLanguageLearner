@@ -69,7 +69,12 @@ export default function ReadingLesson({
 
   const handlePlayPause = useCallback(() => {
     if (isPlaying) {
+      // Stop current playback
       stopSpeaking();
+      if (intervalRef.current) {
+        clearTimeout(intervalRef.current);
+        intervalRef.current = null;
+      }
       setIsPlaying(false);
       setCurrentWordIndex(-1);
     } else {
@@ -82,11 +87,11 @@ export default function ReadingLesson({
         speak(text, {
           rate: 0.85, // Natural speaking pace
           pitch: 1.0,
-          volume: 0.9
+          volume: 0.8
         });
       }
     }
-  }, [isPlaying, readingMode, text, speak, stopSpeaking]);
+  }, [isPlaying, readingMode, text, speak, stopSpeaking, startGuidedReading]);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -95,43 +100,49 @@ export default function ReadingLesson({
     
     // Clear any existing interval
     if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+      clearTimeout(intervalRef.current);
+      intervalRef.current = null;
     }
     
     const readNextWord = () => {
-      if (wordIndex < allWords.length && isPlaying) {
-        setCurrentWordIndex(wordIndex);
-        
-        // Speak word with natural timing
-        speak(allWords[wordIndex], {
-          rate: 0.9,
-          pitch: 1.0,
-          volume: 0.8
-        });
-        
-        setCompletedWords(prev => new Set(prev).add(wordIndex));
-        wordIndex++;
-        
-        // Dynamic timing based on word length
-        const wordLength = allWords[wordIndex - 1]?.length || 4;
-        const timing = Math.max(800, wordLength * 150 + 400);
-        
-        intervalRef.current = setTimeout(readNextWord, timing);
-      } else {
+      // Check if we should continue reading
+      if (wordIndex >= allWords.length) {
         setIsPlaying(false);
         setCurrentWordIndex(-1);
         intervalRef.current = null;
+        return;
       }
+      
+      // Update current word and speak it
+      setCurrentWordIndex(wordIndex);
+      speak(allWords[wordIndex], {
+        rate: 0.8,
+        pitch: 1.0,
+        volume: 0.8
+      });
+      
+      setCompletedWords(prev => new Set(prev).add(wordIndex));
+      
+      // Move to next word
+      wordIndex++;
+      
+      // Schedule next word with dynamic timing
+      const wordLength = allWords[wordIndex - 1]?.length || 4;
+      const timing = Math.max(1200, wordLength * 180 + 600);
+      
+      intervalRef.current = setTimeout(readNextWord, timing);
     };
     
+    // Start reading immediately
     readNextWord();
-  }, [allWords, speak, isPlaying]);
+  }, [allWords, speak]);
 
   // Cleanup interval on unmount
   useEffect(() => {
     return () => {
       if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+        clearTimeout(intervalRef.current);
+        intervalRef.current = null;
       }
     };
   }, []);
@@ -147,10 +158,10 @@ export default function ReadingLesson({
   }, [isListening, startListening, stopListening]);
 
   const resetLesson = useCallback(() => {
-    // Stop all audio and intervals
+    // Stop all audio and timeouts
     stopSpeaking();
     if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+      clearTimeout(intervalRef.current);
       intervalRef.current = null;
     }
     
@@ -223,7 +234,7 @@ export default function ReadingLesson({
     if (onControlsReady) {
       onControlsReady(audioControls);
     }
-  }, [onControlsReady, audioControls]);
+  }, []); // Remove all dependencies to prevent infinite loop
 
   return (
     <div className="max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 space-y-4 sm:space-y-6">
