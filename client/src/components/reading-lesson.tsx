@@ -204,7 +204,7 @@ export default function ReadingLesson({
   }, [completedWords.size, totalWords, onComplete]);
 
   // Restore audio controls with proper memoization
-  const audioControls = useCallback(() => (
+  const audioControls = useMemo(() => (
     <div className="flex items-center gap-2">
       <Button
         variant="ghost"
@@ -232,10 +232,10 @@ export default function ReadingLesson({
   ), [isPlaying, isSupported, handlePlayPause, resetLesson]);
 
   useEffect(() => {
-    if (onControlsReady) {
-      onControlsReady(audioControls());
+    if (onControlsReady && audioControls) {
+      onControlsReady(audioControls);
     }
-  }, [onControlsReady, audioControls]);
+  }, [onControlsReady]);
 
   return (
     <div className="max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 space-y-4 sm:space-y-6">
