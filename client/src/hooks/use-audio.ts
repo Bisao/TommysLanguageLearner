@@ -217,10 +217,18 @@ export function useAudio() {
         setCurrentText("");
         setRemainingText("");
         cleanup();
+        
+        // Verificar se o speechSynthesis está realmente parado
+        setTimeout(() => {
+          if (speechSynthesis.speaking) {
+            console.warn("speechSynthesis still speaking after onend - forcing cancel");
+            speechSynthesis.cancel();
+          }
+        }, 100);
       };
       
       utterance.onerror = (event) => {
-        console.error("Speech synthesis error:", event);
+        console.error("Speech synthesis error:", event.error || event.type, event);
         
         // Tratamento específico para diferentes tipos de erro
         if (event.error === 'interrupted') {
@@ -233,6 +241,15 @@ export function useAudio() {
           setIsPlaying(false);
           setIsPaused(false);
           setCurrentUtterance(null);
+        } else if (event.error === 'not-allowed') {
+          console.log("Speech not allowed - user may need to interact first");
+          setIsPlaying(false);
+          setIsPaused(false);
+          setCurrentUtterance(null);
+        } else if (event.error === 'network') {
+          console.log("Network error during speech synthesis");
+          // Não limpar completamente em erros de rede, pode ser temporário
+          setIsPlaying(false);
         } else {
           console.error("Unexpected speech error:", event.error);
           cleanup();
@@ -266,11 +283,30 @@ export function useAudio() {
     // Handle voice loading with better error handling
     const speakUtterance = () => {
       try {
-        speechSynthesis.speak(utterance);
+        // Verificar se o speechSynthesis está disponível antes de usar
+        if (!speechSynthesis) {
+          throw new Error("speechSynthesis not available");
+        }
+        
+        // Verificar se já há algo falando
+        if (speechSynthesis.speaking) {
+          console.log("speechSynthesis busy, canceling previous");
+          speechSynthesis.cancel();
+          // Aguardar um pouco antes de tentar novamente
+          setTimeout(() => {
+            if (!speechSynthesis.speaking) {
+              speechSynthesis.speak(utterance);
+            }
+          }, 100);
+        } else {
+          speechSynthesis.speak(utterance);
+        }
       } catch (error) {
         console.error("Error starting speech synthesis:", error);
         setIsPlaying(false);
+        setIsPaused(false);
         setCurrentUtterance(null);
+        cleanup();
       }
     };
 
@@ -320,16 +356,35 @@ export function useAudio() {
     if (speechSynthesis.speaking && !speechSynthesis.paused) {
       try {
         speechSynthesis.pause();
-        setIsPaused(true);
-        setIsPlaying(false);
-        console.log("Speech synthesis paused successfully");
+        
+        // Verificar se realmente pausou
+        setTimeout(() => {
+          if (speechSynthesis.paused || !speechSynthesis.speaking) {
+            setIsPaused(true);
+            setIsPlaying(false);
+            console.log("Speech synthesis paused successfully");
+          } else {
+            console.warn("Pause failed, using cancel fallback");
+            speechSynthesis.cancel();
+            setIsPaused(false);
+            setIsPlaying(false);
+            setCurrentUtterance(null);
+          }
+        }, 50);
+        
       } catch (error) {
         console.warn("Error pausing speech synthesis:", error);
         // Fallback para dispositivos que não suportam pause
         speechSynthesis.cancel();
-        setIsPaused(true);
+        setIsPaused(false);
         setIsPlaying(false);
+        setCurrentUtterance(null);
       }
+    } else if (speechSynthesis.speaking && speechSynthesis.paused) {
+      // Já está pausado
+      setIsPaused(true);
+      setIsPlaying(false);
+      console.log("Speech was already paused");
     }
   }, []);
 
