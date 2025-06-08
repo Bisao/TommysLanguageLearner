@@ -158,16 +158,10 @@ These trends suggest that the future of food will be more diverse, more sustaina
           className="px-3 sm:px-4 lg:px-8"
         >
           <ReadingLesson
-            lesson={{
-              id: "reading-1",
-              title: currentLessonData.title,
-              text: currentLessonData.text,
-              level: "intermediate",
-              category: "reading",
-              estimatedTime: 15,
-              xpReward: 50
-            }}
+            title={currentLessonData.title}
+            text={currentLessonData.text}
             onComplete={handleLessonComplete}
+            onControlsReady={handleControlsReady}
           />
         </motion.div>
 
