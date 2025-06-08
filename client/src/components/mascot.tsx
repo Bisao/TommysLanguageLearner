@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import tommyImage from "@assets/TTommy.png";
+import tommyImage from "@assets/Screenshot_2025-06-04_015828-removebg-preview.png";
 
 export default function Mascot() {
   return (
