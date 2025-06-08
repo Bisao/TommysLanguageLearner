@@ -54,8 +54,10 @@ export default function ReadingLesson({
     isSupported: speechRecognitionSupported 
   } = useSpeechRecognition();
 
-  const words = text.split(/\s+/).filter(word => word.length > 0);
-  const totalWords = words.length;
+  // Split text into paragraphs and then words, preserving structure
+  const paragraphs = text.split('\n\n').filter(p => p.trim().length > 0);
+  const allWords = text.split(/\s+/).filter(word => word.length > 0);
+  const totalWords = allWords.length;
 
   const handleWordClick = useCallback((word: string, index: number) => {
     if (isSupported) {
@@ -97,11 +99,11 @@ export default function ReadingLesson({
     }
     
     const readNextWord = () => {
-      if (wordIndex < words.length && isPlaying) {
+      if (wordIndex < allWords.length && isPlaying) {
         setCurrentWordIndex(wordIndex);
         
         // Speak word with natural timing
-        speak(words[wordIndex], {
+        speak(allWords[wordIndex], {
           rate: 0.9,
           pitch: 1.0,
           volume: 0.8
@@ -111,7 +113,7 @@ export default function ReadingLesson({
         wordIndex++;
         
         // Dynamic timing based on word length
-        const wordLength = words[wordIndex - 1]?.length || 4;
+        const wordLength = allWords[wordIndex - 1]?.length || 4;
         const timing = Math.max(800, wordLength * 150 + 400);
         
         intervalRef.current = setTimeout(readNextWord, timing);
@@ -123,7 +125,7 @@ export default function ReadingLesson({
     };
     
     readNextWord();
-  }, [words, speak, isPlaying]);
+  }, [allWords, speak, isPlaying]);
 
   // Cleanup interval on unmount
   useEffect(() => {
@@ -189,12 +191,39 @@ export default function ReadingLesson({
     }
   }, [completedWords.size, totalWords, onComplete]);
 
-  // Temporarily disable audio controls to fix infinite loop
+  // Restore audio controls with proper memoization
+  const audioControls = useMemo(() => (
+    <div className="flex items-center gap-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handlePlayPause}
+        disabled={!isSupported}
+        className="text-white hover:bg-white/20"
+      >
+        {isPlaying ? (
+          <Pause className="w-4 h-4" />
+        ) : (
+          <Play className="w-4 h-4" />
+        )}
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={resetLesson}
+        className="text-white hover:bg-white/20"
+      >
+        <RotateCcw className="w-4 h-4" />
+      </Button>
+    </div>
+  ), [isPlaying, isSupported, handlePlayPause, resetLesson]);
+
   useEffect(() => {
     if (onControlsReady) {
-      onControlsReady(null);
+      onControlsReady(audioControls);
     }
-  }, []);
+  }, [onControlsReady, audioControls]);
 
   return (
     <div className="max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 space-y-4 sm:space-y-6">
@@ -343,16 +372,16 @@ export default function ReadingLesson({
             </div>
           </CardHeader>
 
-          <CardContent className="px-6 pb-8">
+          <CardContent className="px-4 sm:px-6 pb-6 sm:pb-8">
             {/* Interactive Text */}
             <motion.div
               ref={textRef}
-              className="text-lg sm:text-xl leading-relaxed text-gray-800 text-justify"
+              className="text-base sm:text-lg lg:text-xl leading-loose sm:leading-relaxed text-gray-800 text-justify space-y-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
-              {words.map((word, index) => {
+              {allWords.map((word: string, index: number) => {
                 const isCurrentWord = currentWordIndex === index;
                 const isCompleted = completedWords.has(index);
 
@@ -361,9 +390,9 @@ export default function ReadingLesson({
                     key={index}
                     onClick={() => handleWordClick(word, index)}
                     className={`
-                      text-word-highlight inline-block mx-1 my-1 px-2 py-1 rounded-md cursor-pointer
+                      text-word-highlight inline-block mx-0.5 sm:mx-1 my-0.5 sm:my-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md cursor-pointer
                       transition-all duration-300 hover:bg-blue-100 hover:scale-105
-                      ${isCurrentWord ? 'text-word-current bg-blue-500 text-white' : ''}
+                      ${isCurrentWord ? 'text-word-current bg-blue-500 text-white shadow-lg' : ''}
                       ${isCompleted ? 'bg-green-100 text-green-800' : ''}
                       ${!isCompleted && !isCurrentWord ? 'hover:bg-gray-100' : ''}
                     `}
