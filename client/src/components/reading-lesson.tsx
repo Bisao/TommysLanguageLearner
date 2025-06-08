@@ -1,457 +1,536 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Badge } from './ui/badge';
-import { Progress } from './ui/progress';
-import { Clock, Play, Pause, RotateCcw, Volume2, Mic, MicOff, Eye, EyeOff } from 'lucide-react';
-import { useSpeechRecognition } from '../hooks/use-speech-recognition';
-import { useAudio } from '../hooks/use-audio';
-import { cn } from '../lib/utils';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { 
+  Play, 
+  Pause, 
+  Volume2, 
+  VolumeX, 
+  RotateCcw, 
+  BookOpen, 
+  Eye, 
+  Clock,
+  Headphones,
+  Mic,
+  MicOff,
+  CheckCircle2,
+  Target,
+  Sparkles,
+  ChevronRight
+} from "lucide-react";
+import { useSpeech } from "@/hooks/use-speech";
+import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 
 interface ReadingLessonProps {
-  lesson: {
-    id: string;
-    title: string;
-    text: string;
-    level: string;
-    category: string;
-    estimatedTime: number;
-    xpReward: number;
-  };
-  onComplete?: (stats: any) => void;
+  title: string;
+  text: string;
+  onComplete: () => void;
+  onControlsReady?: (controls: React.ReactNode) => void;
 }
 
-interface WordStatus {
-  word: string;
-  status: 'pending' | 'correct' | 'close' | 'incorrect';
-}
+export default function ReadingLesson({ 
+  title, 
+  text, 
+  onComplete, 
+  onControlsReady 
+}: ReadingLessonProps) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentWordIndex, setCurrentWordIndex] = useState(-1);
+  const [readingProgress, setReadingProgress] = useState(0);
+  const [isListening, setIsListening] = useState(false);
+  const [readingMode, setReadingMode] = useState<'normal' | 'guided' | 'practice'>('normal');
+  const [completedWords, setCompletedWords] = useState<Set<number>>(new Set());
+  const [showTranslation, setShowTranslation] = useState(false);
 
-export default function ReadingLesson({ lesson, onComplete }: ReadingLessonProps) {
-  const [isReading, setIsReading] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [isComplete, setIsComplete] = useState(false);
-  const [showTranscript, setShowTranscript] = useState(false);
-  const [userTranscript, setUserTranscript] = useState('');
-  const [accuracyScore, setAccuracyScore] = useState(0);
-  const [wordStatuses, setWordStatuses] = useState<WordStatus[]>([]);
-  const [selectedText, setSelectedText] = useState('');
-  const [translationPosition, setTranslationPosition] = useState({ x: 0, y: 0 });
-
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const hasInitialized = useRef(false);
-
+  const textRef = useRef<HTMLDivElement>(null);
+  const { speak, stop: stopSpeaking, isSupported } = useSpeech();
   const { 
-    transcript, 
-    isListening, 
     startListening, 
-    stopListening,
-    isSupported: speechSupported 
+    stopListening, 
+    transcript, 
+    isSupported: speechRecognitionSupported 
   } = useSpeechRecognition();
 
-  const { playAudio, isPlaying, pauseAudio } = useAudio();
+  // Split text into paragraphs and then words, preserving structure
+  const paragraphs = text.split('\n\n').filter(p => p.trim().length > 0);
+  const allWords = text.split(/\s+/).filter(word => word.length > 0);
+  const totalWords = allWords.length;
 
-  // Initialize word statuses only once
-  const initialWordStatuses = useMemo(() => {
-    if (!lesson?.text) return [];
-
-    const words = lesson.text.split(/\s+/).filter(word => word.length > 0);
-    return words.map(word => ({
-      word: word.toLowerCase().replace(/[.,!?;:]/g, ''),
-      status: 'pending' as const
-    }));
-  }, [lesson?.text]);
-
-  // Initialize component state
-  useEffect(() => {
-    if (!hasInitialized.current && initialWordStatuses.length > 0) {
-      setWordStatuses(initialWordStatuses);
-      hasInitialized.current = true;
+  const handleWordClick = useCallback((word: string, index: number) => {
+    if (isSupported) {
+      speak(word);
+      setCurrentWordIndex(index);
+      setCompletedWords(prev => new Set(prev).add(index));
     }
-  }, [initialWordStatuses]);
+  }, [speak, isSupported]);
 
-  // Timer effect
-  useEffect(() => {
-    if (isReading) {
-      timerRef.current = setInterval(() => {
-        setCurrentTime(prev => prev + 1);
-      }, 1000);
+  const handlePlayPause = useCallback(() => {
+    if (isPlaying) {
+      // Stop current playback
+      stopSpeaking();
+      if (intervalRef.current) {
+        clearTimeout(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setIsPlaying(false);
+      setCurrentWordIndex(-1);
     } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
+      setIsPlaying(true);
+      setCurrentWordIndex(0);
+      if (readingMode === 'guided') {
+        startGuidedReading();
+      } else {
+        // Natural reading of full text with improved settings
+        speak(text, {
+          rate: 0.85, // Natural speaking pace
+          pitch: 1.0,
+          volume: 0.8
+        });
       }
     }
+  }, [isPlaying, readingMode, text, speak, stopSpeaking, startGuidedReading]);
 
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startGuidedReading = useCallback(() => {
+    let wordIndex = 0;
+    
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearTimeout(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    const readNextWord = () => {
+      // Check if we should continue reading
+      if (wordIndex >= allWords.length) {
+        setIsPlaying(false);
+        setCurrentWordIndex(-1);
+        intervalRef.current = null;
+        return;
+      }
+      
+      // Update current word and speak it
+      setCurrentWordIndex(wordIndex);
+      speak(allWords[wordIndex], {
+        rate: 0.8,
+        pitch: 1.0,
+        volume: 0.8
+      });
+      
+      setCompletedWords(prev => new Set(prev).add(wordIndex));
+      
+      // Move to next word
+      wordIndex++;
+      
+      // Schedule next word with dynamic timing
+      const wordLength = allWords[wordIndex - 1]?.length || 4;
+      const timing = Math.max(1200, wordLength * 180 + 600);
+      
+      intervalRef.current = setTimeout(readNextWord, timing);
+    };
+    
+    // Start reading immediately
+    readNextWord();
+  }, [allWords, speak]);
+
+  // Cleanup interval on unmount
+  useEffect(() => {
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
+      if (intervalRef.current) {
+        clearTimeout(intervalRef.current);
+        intervalRef.current = null;
       }
     };
-  }, [isReading]);
-
-  // Handle transcript updates
-  useEffect(() => {
-    if (transcript && transcript !== userTranscript) {
-      setUserTranscript(transcript);
-      updateWordAccuracy(transcript);
-    }
-  }, [transcript, userTranscript]);
-
-  // Calculate similarity between two words
-  const calculateSimilarity = useCallback((word1: string, word2: string): number => {
-    const w1 = word1.toLowerCase().replace(/[.,!?;:]/g, '');
-    const w2 = word2.toLowerCase().replace(/[.,!?;:]/g, '');
-
-    if (w1 === w2) return 1;
-
-    const len1 = w1.length;
-    const len2 = w2.length;
-    const matrix: number[][] = [];
-
-    for (let i = 0; i <= len2; i++) {
-      matrix[i] = [i];
-    }
-    for (let j = 0; j <= len1; j++) {
-      matrix[0][j] = j;
-    }
-
-    for (let i = 1; i <= len2; i++) {
-      for (let j = 1; j <= len1; j++) {
-        if (w2.charAt(i - 1) === w1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
-          );
-        }
-      }
-    }
-
-    const distance = matrix[len2][len1];
-    const maxLen = Math.max(len1, len2);
-    return maxLen === 0 ? 1 : 1 - distance / maxLen;
   }, []);
 
-  // Update word accuracy based on speech transcript
-  const updateWordAccuracy = useCallback((transcript: string) => {
-    if (!lesson?.text || wordStatuses.length === 0) return;
-
-    const spokenWords = transcript.toLowerCase().split(/\s+/).filter(word => word.length > 0);
-    const textWords = lesson.text.split(/\s+/).filter(word => word.length > 0);
-
-    setWordStatuses(prevStatuses => {
-      const newStatuses = [...prevStatuses];
-
-      spokenWords.forEach(spokenWord => {
-        let bestMatch = -1;
-        let bestSimilarity = 0;
-
-        textWords.forEach((textWord, index) => {
-          const similarity = calculateSimilarity(textWord, spokenWord);
-          if (similarity > bestSimilarity && similarity > 0.3) {
-            bestSimilarity = similarity;
-            bestMatch = index;
-          }
-        });
-
-        if (bestMatch !== -1 && newStatuses[bestMatch]) {
-          if (bestSimilarity >= 0.9) {
-            newStatuses[bestMatch].status = 'correct';
-          } else if (bestSimilarity >= 0.6) {
-            newStatuses[bestMatch].status = 'close';
-          } else {
-            newStatuses[bestMatch].status = 'incorrect';
-          }
-        }
-      });
-
-      return newStatuses;
-    });
-  }, [lesson?.text, wordStatuses.length, calculateSimilarity]);
-
-  // Calculate reading progress
-  const calculateProgress = useCallback((transcript: string): number => {
-    if (!lesson?.text) return 0;
-
-    const totalWords = lesson.text.split(/\s+/).length;
-    const spokenWords = transcript.split(/\s+/).filter(word => word.length > 0).length;
-
-    return Math.min((spokenWords / totalWords) * 100, 100);
-  }, [lesson?.text]);
-
-  // Update accuracy score
-  useEffect(() => {
-    if (userTranscript && lesson?.text) {
-      const progress = calculateProgress(userTranscript);
-      setAccuracyScore(progress);
-      updateWordAccuracy(userTranscript);
-    }
-  }, [userTranscript, lesson?.text, calculateProgress, updateWordAccuracy]);
-
-  // Start guided reading
-  const startGuidedReading = useCallback(() => {
-    setIsReading(true);
-    setCurrentTime(0);
-    setUserTranscript('');
-    setAccuracyScore(0);
-
-    if (speechSupported) {
-      startListening();
-    }
-  }, [speechSupported, startListening]);
-
-  // Stop reading
-  const stopReading = useCallback(() => {
-    setIsReading(false);
-    stopListening();
-
-    if (accuracyScore >= 80) {
-      setIsComplete(true);
-      onComplete?.({
-        timeSpent: currentTime,
-        accuracy: accuracyScore,
-        wordsRead: userTranscript.split(/\s+/).length
-      });
-    }
-  }, [stopListening, accuracyScore, currentTime, userTranscript, onComplete]);
-
-  // Reset reading session
-  const resetReading = useCallback(() => {
-    setIsReading(false);
-    setCurrentTime(0);
-    setUserTranscript('');
-    setAccuracyScore(0);
-    setIsComplete(false);
-    setWordStatuses(initialWordStatuses);
-    stopListening();
-  }, [initialWordStatuses, stopListening]);
-
-  // Handle text selection for translation
-  const handleTextSelection = useCallback(() => {
-    const selection = window.getSelection();
-    if (selection && selection.toString().trim()) {
-      const selectedText = selection.toString().trim();
-      setSelectedText(selectedText);
-
-      if (selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-        setTranslationPosition({
-          x: rect.left + rect.width / 2,
-          y: rect.top - 10
-        });
-      }
+  const handleMicrophoneToggle = useCallback(() => {
+    if (isListening) {
+      stopListening();
+      setIsListening(false);
     } else {
-      setSelectedText('');
+      startListening();
+      setIsListening(true);
     }
-  }, []);
+  }, [isListening, startListening, stopListening]);
 
-  // Format time display
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+  const resetLesson = useCallback(() => {
+    // Stop all audio and timeouts
+    stopSpeaking();
+    if (intervalRef.current) {
+      clearTimeout(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    // Reset all states
+    setIsPlaying(false);
+    setCurrentWordIndex(-1);
+    setReadingProgress(0);
+    setCompletedWords(new Set());
+    setIsListening(false);
+    stopListening();
+  }, [stopSpeaking, stopListening]);
 
-  if (!lesson) {
-    return <div>Loading lesson...</div>;
-  }
+  const completeLesson = useCallback(() => {
+    setReadingProgress(100);
+    setTimeout(() => {
+      onComplete();
+    }, 1500);
+  }, [onComplete]);
+
+  // Atualizar progresso baseado nas palavras completadas
+  useEffect(() => {
+    const progress = (completedWords.size / totalWords) * 100;
+    setReadingProgress(progress);
+  }, [completedWords, totalWords]);
+
+  // Separate effect for completion check to avoid dependency loop
+  useEffect(() => {
+    const progress = (completedWords.size / totalWords) * 100;
+    if (progress >= 80 && completedWords.size > totalWords * 0.8) {
+      // Auto-completar quando 80% das palavras foram lidas
+      const timer = setTimeout(() => {
+        setReadingProgress(100);
+        setTimeout(() => {
+          onComplete();
+        }, 1500);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [completedWords.size, totalWords, onComplete]);
+
+  // Restore audio controls with proper memoization
+  const audioControls = useMemo(() => (
+    <div className="flex items-center gap-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handlePlayPause}
+        disabled={!isSupported}
+        className="text-white hover:bg-white/20"
+      >
+        {isPlaying ? (
+          <Pause className="w-4 h-4" />
+        ) : (
+          <Play className="w-4 h-4" />
+        )}
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={resetLesson}
+        className="text-white hover:bg-white/20"
+      >
+        <RotateCcw className="w-4 h-4" />
+      </Button>
+    </div>
+  ), [isPlaying, isSupported, handlePlayPause, resetLesson]);
+
+  useEffect(() => {
+    if (onControlsReady) {
+      onControlsReady(audioControls);
+    }
+  }, []); // Remove all dependencies to prevent infinite loop
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-4xl mx-auto p-4 space-y-6"
-    >
-      {/* Header */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-2xl">{lesson.title}</CardTitle>
-              <div className="flex items-center gap-4 mt-2">
-                <Badge variant="secondary">{lesson.level}</Badge>
-                <Badge variant="outline">{lesson.category}</Badge>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Clock className="w-4 h-4" />
-                  {lesson.estimatedTime} min
+    <div className="max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 space-y-4 sm:space-y-6">
+      {/* Progress and Controls */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4"
+      >
+        {/* Progress Card */}
+        <motion.div whileHover={{ scale: 1.02 }} className="lg:col-span-2">
+          <Card className="card-glass border-2 border-blue-200">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Target className="w-5 h-5 text-blue-500" />
+                  <span className="font-semibold text-gray-700">Progresso da Leitura</span>
                 </div>
+                <Badge className="bg-blue-100 text-blue-700">
+                  {Math.round(readingProgress)}%
+                </Badge>
               </div>
-            </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-primary">{formatTime(currentTime)}</div>
-              <div className="text-sm text-muted-foreground">Reading Time</div>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+              <Progress value={readingProgress} className="h-3 mb-2" />
+              <div className="text-sm text-gray-600">
+                {completedWords.size} de {totalWords} palavras lidas
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-      {/* Controls */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              {!isReading ? (
-                <Button onClick={startGuidedReading} className="flex items-center gap-2">
-                  <Play className="w-4 h-4" />
-                  Start Reading
-                </Button>
-              ) : (
-                <Button onClick={stopReading} variant="secondary" className="flex items-center gap-2">
-                  <Pause className="w-4 h-4" />
-                  Stop Reading
+        {/* Mode Selection */}
+        <motion.div whileHover={{ scale: 1.02 }}>
+          <Card className="card-glass border-2 border-purple-200">
+            <CardContent className="p-3 sm:p-4">
+              <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-purple-500" />
+                Modo de Leitura
+              </h3>
+              <div className="space-y-2">
+                {[
+                  { key: 'normal', label: 'Normal', icon: BookOpen },
+                  { key: 'guided', label: 'Guiada', icon: Headphones },
+                  { key: 'practice', label: 'Prática', icon: Mic }
+                ].map(({ key, label, icon: Icon }) => (
+                  <Button
+                    key={key}
+                    variant={readingMode === key ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setReadingMode(key as any)}
+                    className="w-full justify-start"
+                  >
+                    <Icon className="w-4 h-4 mr-2" />
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
+
+      {/* Main Reading Area */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <Card className="card-glass border-2 border-indigo-200 min-h-[400px]">
+          <CardHeader className="text-center pb-4">
+            <CardTitle className="text-2xl sm:text-3xl gradient-text-reading mb-4">
+              {title}
+            </CardTitle>
+
+            {/* Reading Controls */}
+            <div className="flex flex-wrap justify-center gap-3 mb-4">
+              <Button
+                onClick={handlePlayPause}
+                disabled={!isSupported}
+                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg"
+              >
+                {isPlaying ? (
+                  <>
+                    <Pause className="w-4 h-4 mr-2" />
+                    Pausar
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 mr-2" />
+                    {readingMode === 'guided' ? 'Leitura Guiada' : 'Reproduzir'}
+                  </>
+                )}
+              </Button>
+
+              {speechRecognitionSupported && readingMode === 'practice' && (
+                <Button
+                  onClick={handleMicrophoneToggle}
+                  variant="outline"
+                  className={`border-2 ${
+                    isListening 
+                      ? 'border-red-400 bg-red-50 text-red-600 microphone-pulse' 
+                      : 'border-gray-300'
+                  }`}
+                >
+                  {isListening ? (
+                    <>
+                      <MicOff className="w-4 h-4 mr-2" />
+                      Parar Gravação
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-4 h-4 mr-2" />
+                      Praticar Pronúncia
+                    </>
+                  )}
                 </Button>
               )}
 
-              <Button onClick={resetReading} variant="outline" className="flex items-center gap-2">
-                <RotateCcw className="w-4 h-4" />
-                Reset
+              <Button
+                onClick={resetLesson}
+                variant="outline"
+                className="border-2 border-gray-300"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Reiniciar
               </Button>
             </div>
 
-            <div className="flex items-center gap-2">
-              {speechSupported && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowTranscript(!showTranscript)}
-                  className="flex items-center gap-2"
-                >
-                  {showTranscript ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  {showTranscript ? 'Hide' : 'Show'} Transcript
-                </Button>
-              )}
-
-              <div className="flex items-center gap-2">
-                {isListening ? <MicOff className="w-4 h-4 text-red-500" /> : <Mic className="w-4 h-4" />}
-                <span className="text-sm">
-                  {isListening ? 'Listening...' : 'Not listening'}
-                </span>
+            {/* Reading Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+              <div className="text-center">
+                <div className="text-lg font-bold text-blue-600">{totalWords}</div>
+                <div className="text-gray-600">Palavras</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-green-600">{completedWords.size}</div>
+                <div className="text-gray-600">Lidas</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-purple-600">~5min</div>
+                <div className="text-gray-600">Tempo</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-orange-600">B1</div>
+                <div className="text-gray-600">Nível</div>
               </div>
             </div>
-          </div>
+          </CardHeader>
 
-          {/* Progress */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Reading Progress</span>
-              <span>{Math.round(accuracyScore)}%</span>
-            </div>
-            <Progress value={accuracyScore} className="h-2" />
-          </div>
-        </CardContent>
-      </Card>
+          <CardContent className="px-4 sm:px-6 pb-6 sm:pb-8">
+            {/* Interactive Text */}
+            <motion.div
+              ref={textRef}
+              className="text-base sm:text-lg lg:text-xl leading-loose sm:leading-relaxed text-gray-800 text-justify space-y-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              {allWords.map((word: string, index: number) => {
+                const isCurrentWord = currentWordIndex === index;
+                const isCompleted = completedWords.has(index);
 
-      {/* Reading Text */}
-      <Card>
-        <CardContent className="pt-6">
-          <div 
-            className="text-lg leading-relaxed space-y-4 select-text"
-            onMouseUp={handleTextSelection}
-          >
-            {lesson.text.split(/\s+/).map((word, index) => {
-              const wordStatus = wordStatuses[index];
-              return (
-                <span
-                  key={index}
-                  className={cn(
-                    "transition-colors duration-200",
-                    wordStatus?.status === 'correct' && "bg-green-200 text-green-800",
-                    wordStatus?.status === 'close' && "bg-yellow-200 text-yellow-800",
-                    wordStatus?.status === 'incorrect' && "bg-red-200 text-red-800"
-                  )}
+                return (
+                  <motion.span
+                    key={index}
+                    onClick={() => handleWordClick(word, index)}
+                    className={`
+                      text-word-highlight inline-block mx-0.5 sm:mx-1 my-0.5 sm:my-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md cursor-pointer
+                      transition-all duration-300 hover:bg-blue-100 hover:scale-105
+                      ${isCurrentWord ? 'text-word-current bg-blue-500 text-white shadow-lg' : ''}
+                      ${isCompleted ? 'bg-green-100 text-green-800' : ''}
+                      ${!isCompleted && !isCurrentWord ? 'hover:bg-gray-100' : ''}
+                    `}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.01 }}
+                  >
+                    {word}
+                    {isCompleted && (
+                      <CheckCircle2 className="w-3 h-3 text-green-600 inline ml-1" />
+                    )}
+                    {isCurrentWord && (
+                      <motion.div
+                        className="floating-audio-icon inline ml-1"
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ repeat: Infinity, duration: 1 }}
+                      >
+                        <Volume2 className="w-3 h-3 text-white" />
+                      </motion.div>
+                    )}
+                  </motion.span>
+                );
+              })}
+            </motion.div>
+
+            {/* Speech Recognition Feedback */}
+            <AnimatePresence>
+              {isListening && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="mt-6 p-4 bg-red-50 border-2 border-red-200 rounded-lg"
                 >
-                  {word}{' '}
-                </span>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                    <span className="text-red-700 font-medium">Gravando sua pronúncia...</span>
+                  </div>
+                  {transcript && (
+                    <div className="text-gray-700 bg-white p-2 rounded border">
+                      <strong>Você disse:</strong> "{transcript}"
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-      {/* Transcript */}
-      <AnimatePresence>
-        {showTranscript && (
+            {/* Completion Message */}
+            <AnimatePresence>
+              {readingProgress >= 80 && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="mt-6 text-center"
+                >
+                  <Card className="border-2 border-green-300 bg-green-50">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-center gap-2 text-green-700">
+                        <CheckCircle2 className="w-6 h-6" />
+                        <span className="font-semibold text-lg">
+                          Excelente! Você completou a leitura!
+                        </span>
+                      </div>
+                      <p className="text-green-600 mt-2">
+                        Preparando sua próxima lição...
+                      </p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Quick Actions */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+      >
+        {[
+          { 
+            title: "Repetir Texto", 
+            icon: RotateCcw, 
+            action: () => speak(text),
+            color: "blue"
+          },
+          { 
+            title: "Modo Silencioso", 
+            icon: VolumeX, 
+            action: stopSpeaking,
+            color: "gray"
+          },
+          { 
+            title: "Tradução", 
+            icon: Eye, 
+            action: () => setShowTranslation(!showTranslation),
+            color: "purple"
+          },
+          { 
+            title: "Finalizar", 
+            icon: ChevronRight, 
+            action: completeLesson,
+            color: "green"
+          }
+        ].map(({ title, icon: Icon, action, color }, index) => (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
+            key={title}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Your Reading Transcript</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="p-4 bg-muted rounded-lg min-h-[100px]">
-                  {userTranscript || 'Start reading to see your transcript here...'}
-                </div>
+            <Card 
+              className={`cursor-pointer border-2 border-${color}-200 hover:border-${color}-300 transition-all duration-300 hover:shadow-lg`}
+              onClick={action}
+            >
+              <CardContent className="p-4 text-center">
+                <Icon className={`w-6 h-6 text-${color}-500 mx-auto mb-2`} />
+                <span className="text-sm font-medium text-gray-700">{title}</span>
               </CardContent>
             </Card>
           </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Translation Popup */}
-      <AnimatePresence>
-        {selectedText && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="fixed z-50 bg-black text-white px-3 py-2 rounded-lg text-sm"
-            style={{
-              left: translationPosition.x,
-              top: translationPosition.y,
-              transform: 'translate(-50%, -100%)'
-            }}
-          >
-            <div className="font-medium">{selectedText}</div>
-            <div className="text-xs opacity-75">Click outside to close</div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Completion Modal */}
-      <AnimatePresence>
-        {isComplete && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-          >
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="bg-white rounded-2xl p-8 max-w-md w-full text-center"
-            >
-              <div className="text-6xl mb-4">🎉</div>
-              <h2 className="text-2xl font-bold mb-2">Great Job!</h2>
-              <p className="text-muted-foreground mb-6">
-                You've completed the reading lesson with {Math.round(accuracyScore)}% accuracy!
-              </p>
-              <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
-                <div>
-                  <div className="font-medium">Time Spent</div>
-                  <div className="text-muted-foreground">{formatTime(currentTime)}</div>
-                </div>
-                <div>
-                  <div className="font-medium">XP Earned</div>
-                  <div className="text-muted-foreground">{lesson.xpReward} XP</div>
-                </div>
-              </div>
-              <Button onClick={resetReading} className="w-full">
-                Continue Learning
-              </Button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+        ))}
+      </motion.div>
+    </div>
   );
 }
