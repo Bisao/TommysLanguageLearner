@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -156,10 +157,10 @@ export default function LessonModal({ lessonId, onClose }: LessonModalProps) {
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-8">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl p-6 sm:p-8 max-w-sm w-full">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cartoon-teal mx-auto"></div>
-          <p className="mt-4 text-center">Carregando lição...</p>
+          <p className="mt-4 text-center text-sm sm:text-base">Carregando lição...</p>
         </div>
       </div>
     );
@@ -167,10 +168,10 @@ export default function LessonModal({ lessonId, onClose }: LessonModalProps) {
 
   if (!lesson || questions.length === 0) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-2xl p-8 text-center">
-          <p>Lição não encontrada.</p>
-          <Button onClick={onClose} className="mt-4">Fechar</Button>
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl p-6 sm:p-8 text-center max-w-sm w-full">
+          <p className="text-sm sm:text-base">Lição não encontrada.</p>
+          <Button onClick={onClose} className="mt-4 w-full sm:w-auto">Fechar</Button>
         </div>
       </div>
     );
@@ -178,98 +179,134 @@ export default function LessonModal({ lessonId, onClose }: LessonModalProps) {
 
   return (
     <AnimatePresence>
-      
-      
-          
-            
-              
-            
-              
-                
-                
-              
-            
-          
-
-          
-            
-              
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4"
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 sm:p-6 border-b">
+            <div className="flex-1">
+              <h2 className="text-lg sm:text-xl font-bold text-cartoon-dark">
                 Progresso da Lição
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-600">
                 {currentQuestionIndex + 1} de {questions.length}
-              
-            
-             
-          
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="shrink-0"
+            >
+              <X size={20} />
+            </Button>
+          </div>
 
-          
-            
-              
-                
-                  {currentQuestion?.question}
-                
-                
-                  
-                    
-                  
-                
-              
+          {/* Progress Bar */}
+          <div className="px-4 sm:px-6 py-3 border-b">
+            <Progress value={progress} className="h-2 sm:h-3" />
+          </div>
 
-              
-                {currentQuestion?.options?.map((option: string, index: number) => (
-                  
-                      
-                        
+          {/* Question Content */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <Card className="mb-6">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base sm:text-lg font-semibold text-cartoon-dark">
+                    {currentQuestion?.question}
+                  </h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePlayAudio}
+                    className="shrink-0 ml-2"
+                  >
+                    <Volume2 size={16} />
+                  </Button>
+                </div>
+
+                {/* Options */}
+                <div className="grid grid-cols-1 gap-3">
+                  {currentQuestion?.options?.map((option: string, index: number) => (
+                    <button
+                      key={index}
+                      onClick={() => handleAnswerSelect(option)}
+                      disabled={showFeedback}
+                      className={`p-3 sm:p-4 border-2 rounded-lg text-left transition-all duration-200 ${
+                        selectedAnswer === option
+                          ? 'border-cartoon-teal bg-cartoon-teal bg-opacity-10'
+                          : 'border-gray-200 hover:border-cartoon-teal'
+                      } ${showFeedback ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-100 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium shrink-0">
                           {String.fromCharCode(65 + index)}
-                        
-                        {option}
-                      
-                    
-                  
-                ))}
-              
+                        </div>
+                        <span className="text-sm sm:text-base">{option}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
 
-              
-                
-                  Pular
-                
-                
-                  {submitAnswerMutation.isPending ? "Verificando..." : "Verificar"}
-                
-              
-            
-          
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={handleSkipQuestion}
+                    disabled={showFeedback}
+                    className="order-2 sm:order-1"
+                  >
+                    Pular
+                  </Button>
+                  <Button
+                    onClick={handleCheckAnswer}
+                    disabled={!selectedAnswer || showFeedback || submitAnswerMutation.isPending}
+                    className="order-1 sm:order-2 flex-1 sm:flex-initial"
+                  >
+                    {submitAnswerMutation.isPending ? "Verificando..." : "Verificar"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-          
-            
-              
-                
-                
-                handleNextQuestion
-              
-            
-          
+          {/* Feedback Modal */}
+          {showFeedback && (
+            <FeedbackModal
+              isCorrect={answers[currentQuestion.id]}
+              correctAnswer={currentQuestion.correctAnswer}
+              explanation={currentQuestion.explanation}
+              onNext={handleNextQuestion}
+            />
+          )}
 
-          
-            
-              
-                
-                (lesson as any).title
-                currentLessonId
-                
-                  
-                    navigateToNextLesson(nextLessonId)
-                  
-                   onClose()
-                  
-                
-                
-                   onClose()
-                  
-                
-              
-            
-          
-        
+          {/* Completion Modal */}
+          {showCompletion && lessonResults && (
+            <CompletionModal
+              results={lessonResults}
+              lessonTitle={(lesson as any).title}
+              currentLessonId={currentLessonId}
+              onNextLesson={(nextLessonId) => {
+                if (nextLessonId) {
+                  navigateToNextLesson(nextLessonId);
+                } else {
+                  onClose();
+                }
+              }}
+              onBackToHome={() => onClose()}
+            />
+          )}
+        </motion.div>
+      </motion.div>
     </AnimatePresence>
   );
 }

@@ -364,3 +364,52 @@ html,
 :host {
   text-size-adjust: 100%;
 }
+
+/* Responsive utilities */
+@media (max-width: 768px) {
+  .lesson-modal {
+    margin: 0.5rem;
+    max-height: calc(100vh - 1rem);
+  }
+
+  .modal-content {
+    padding: 1rem;
+  }
+
+  .question-options {
+    gap: 0.75rem;
+  }
+
+  .option-button {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .progress-text {
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .lesson-modal {
+    margin: 0.25rem;
+    max-height: calc(100vh - 0.5rem);
+  }
+
+  .modal-header {
+    padding: 1rem;
+  }
+
+  .modal-content {
+    padding: 0.75rem;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .action-buttons button {
+    width: 100%;
+  }
+}
