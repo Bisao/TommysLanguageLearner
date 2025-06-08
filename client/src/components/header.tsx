@@ -1,107 +1,213 @@
-import { useState } from 'react';
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Menu, X, Globe, RotateCcw } from "lucide-react";
+import { Flame, Star, Trophy, BookOpen, Home, Target } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
+import { ThemeToggle } from "@/components/theme-toggle";
+import NotificationSystem from "@/components/notification-system";
+import { useNotifications } from "@/hooks/use-notifications";
+import Mascot from "./mascot";
+import tommyLogoPath from "@assets/Tommy logo.png";
 
 interface HeaderProps {
-  progress: number;
-  onToggleTranslation: () => void;
-  showTranslations: boolean;
+  user?: {
+    username: string;
+    streak: number;
+    totalXP: number;
+    level: number;
+  };
+  audioControls?: React.ReactNode;
+  showAudioControls?: boolean;
 }
 
-export function Header({ progress, onToggleTranslation, showTranslations }: HeaderProps) {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+export default function Header({ user, audioControls, showAudioControls }: HeaderProps) {
+  const [location, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const {
+    notifications,
+    markAsRead,
+    dismissNotification,
+    clearAllNotifications,
+    notifyAchievement,
+  } = useNotifications();
+
+  // Check if we're on the home page
+  const isHomePage = location === "/home";
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/auth/logout", {});
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Logout realizado com sucesso!",
+        description: "Até logo!",
+      });
+      // Clear user data from cache
+      queryClient.setQueryData(["/api/user"], null);
+      // Redirect to login
+      setLocation("/login");
+    },
+    onError: () => {
+      // Even if logout fails on server, clear local data
+      queryClient.setQueryData(["/api/user"], null);
+      setLocation("/login");
+    },
+  });
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
+
+  if (!user) return null;
 
   return (
-    <>
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              {/* Tommy's Academy Logo */}
-              <div className="w-10 h-10 rounded-full overflow-hidden bg-white">
-                <img 
-                  src="/attached_assets/Screenshot_2025-06-04_015828-removebg-preview.png" 
-                  alt="Tommy's Academy Logo" 
-                  className="w-full h-full object-contain"
-                />
+    <header className="fixed top-0 left-0 right-0 z-[200] glass-card border-b border-border/50 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+        <div className="flex justify-between items-center py-2 sm:py-4">
+          {/* Logo Section */}
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center space-x-2 sm:space-x-3 cursor-pointer"
+            onClick={() => setLocation("/home")}
+          >
+            <img 
+              src={tommyLogoPath} 
+              alt="Tommy's Academy Logo" 
+              className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 object-contain"
+            />
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold gradient-text hidden sm:block">Tommy's Academy</h1>
+            <h1 className="text-base font-bold gradient-text sm:hidden">Tommy's</h1>
+          </motion.div>
+
+          {/* Audio Controls for Reading Lesson */}
+          {showAudioControls && audioControls && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center"
+            >
+              {audioControls}
+            </motion.div>
+          )}
+
+          {/* User Stats and Profile */}
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center space-x-2 sm:space-x-4"
+          >
+            {/* Show stats only on home page */}
+            {isHomePage && (
+            <>
+              {/* Daily Goal for larger screens */}
+              <div className="hidden sm:flex items-center space-x-3">
+                {/* Daily Progress */}
+                <motion.div 
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="flex items-center space-x-2 bg-teal-100 dark:bg-teal-900/30 px-3 py-2 rounded-full border border-teal-200 dark:border-teal-800"
+                >
+                  <Target className="w-4 h-4 text-teal-500 dark:text-teal-400" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-xs text-teal-700 dark:text-teal-300 font-medium">Meta Diária</span>
+                    <span className="text-xs text-teal-600 dark:text-teal-400">0%</span>
+                  </div>
+                </motion.div>
+
+                {/* Streak */}
+                <motion.div 
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.1 }}
+                  className="flex items-center space-x-1 bg-orange-100 dark:bg-orange-900/30 px-2 py-1 rounded-full border border-orange-200 dark:border-orange-800"
+                >
+                  <Flame className="w-4 h-4 text-orange-500 dark:text-orange-400" />
+                  <span className="text-orange-700 dark:text-orange-300 font-bold text-sm">{user.streak}</span>
+                </motion.div>
+
+                {/* XP */}
+                <motion.div 
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="flex items-center space-x-1 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-full border border-blue-200 dark:border-blue-800"
+                >
+                  <Star className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+                  <span className="text-blue-700 dark:text-blue-300 font-bold text-sm">{user.totalXP}</span>
+                </motion.div>
+
+                {/* Level */}
+                <motion.div 
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="flex items-center space-x-1 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full border border-green-200 dark:border-green-800"
+                >
+                  <Trophy className="w-4 h-4 text-green-500 dark:text-green-400" />
+                  <span className="text-green-700 dark:text-green-300 font-bold text-sm">{user.level}</span>
+                </motion.div>
+
+                {/* Theme Toggle */}
+                <ThemeToggle />
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Tommy's Academy</h1>
-                <p className="text-sm text-gray-500">Aprendizado Interativo de Inglês</p>
-              </div>
-            </div>
-            
-            <nav className="hidden md:flex items-center space-x-6">
-              <a href="#lessons" className="text-gray-600 hover:text-blue-600 transition-colors">Aulas</a>
-              <a href="#exercises" className="text-gray-600 hover:text-blue-600 transition-colors">Exercícios</a>
-              <a href="#progress" className="text-gray-600 hover:text-blue-600 transition-colors">Progresso</a>
-              
-              {/* Progress Indicator */}
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">Progresso:</span>
-                <div className="w-24">
-                  <Progress value={progress} className="h-2" />
+
+                {/* Compact stats for mobile screens */}
+                <div className="flex sm:hidden items-center space-x-2">
+                  {/* Combined streak/XP display for mobile */}
+                  <motion.div 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="flex items-center space-x-2 bg-white/10 dark:bg-black/10 px-2 py-1 rounded-full border border-white/20 dark:border-gray-700/20 backdrop-blur-sm"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <Flame className="w-3 h-3 text-orange-500" />
+                      <span className="text-orange-700 dark:text-orange-300 font-bold text-xs">{user.streak}</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Star className="w-3 h-3 text-blue-500" />
+                      <span className="text-blue-700 dark:text-blue-300 font-bold text-xs">{user.totalXP}</span>
+                    </div>
+                  </motion.div>
+
+                  {/* Theme Toggle for mobile */}
+                  <ThemeToggle />
                 </div>
-                <span className="text-sm font-medium text-blue-600">{progress}%</span>
-              </div>
-              
-              {/* Translation Toggle */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onToggleTranslation}
-                className={`${showTranslations ? 'bg-blue-50 text-blue-600' : ''}`}
-              >
-                <Globe className="h-4 w-4 mr-2" />
-                {showTranslations ? 'Ocultar Traduções' : 'Mostrar Traduções'}
-              </Button>
-            </nav>
-            
+
+                {/* Notifications for all screen sizes */}
+                <NotificationSystem
+                  notifications={notifications}
+                  onMarkRead={markAsRead}
+                  onDismiss={dismissNotification}
+                  onClearAll={clearAllNotifications}
+                />
+              </>
+            )}
+
+            {/* Profile Avatar */}
             <Button
               variant="ghost"
               size="sm"
-              className="md:hidden"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              onClick={() => setLocation("/profile")}
+              className="flex items-center space-x-1 sm:space-x-2 hover:bg-cartoon-teal/10"
             >
-              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              <Avatar className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 bg-cartoon-blue cursor-pointer transform hover:scale-110 transition-transform">
+                <AvatarFallback className="bg-cartoon-blue text-white font-bold text-xs sm:text-sm">
+                  {user?.username?.charAt(0).toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
             </Button>
-          </div>
-        </div>
-      </header>
 
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden bg-white border-b border-gray-200">
-          <div className="px-4 py-3 space-y-2">
-            <a href="#lessons" className="block px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-md">Aulas</a>
-            <a href="#exercises" className="block px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-md">Exercícios</a>
-            <a href="#progress" className="block px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-gray-50 rounded-md">Progresso</a>
-            
-            {/* Mobile Progress */}
-            <div className="flex items-center space-x-2 px-3 py-2">
-              <span className="text-sm text-gray-600">Progresso:</span>
-              <div className="flex-1">
-                <Progress value={progress} className="h-2" />
-              </div>
-              <span className="text-sm font-medium text-blue-600">{progress}%</span>
-            </div>
-            
-            {/* Mobile Translation Toggle */}
-            <div className="px-3 py-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onToggleTranslation}
-                className={`w-full ${showTranslations ? 'bg-blue-50 text-blue-600' : ''}`}
-              >
-                <Globe className="h-4 w-4 mr-2" />
-                {showTranslations ? 'Ocultar Traduções' : 'Mostrar Traduções'}
-              </Button>
-            </div>
-          </div>
+            </motion.div>
         </div>
-      )}
-    </>
+      </div>
+    </header>
   );
 }

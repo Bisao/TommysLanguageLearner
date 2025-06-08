@@ -1,235 +1,280 @@
-import { useState } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import Header from "@/components/header";
+import Mascot from "@/components/mascot";
+import LessonModal from "@/components/lesson-modal";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GraduationCap, Star, Clock, Users } from "lucide-react";
-import { Header } from "@/components/header";
-import { InteractiveAvatar } from "@/components/interactive-avatar";
-import { GrammarLesson } from "@/components/grammar-lesson";
-import { VocabularySection } from "@/components/vocabulary-section";
-import { ConversationPractice } from "@/components/conversation-practice";
-import { ExerciseSection } from "@/components/exercise-section";
-import { ProgressTracker } from "@/components/progress-tracker";
-import { useTranslation } from "@/hooks/use-translation";
+import { Progress } from "@/components/ui/progress";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { BookOpen, MessageCircle, Mic, Palette, Trophy, Medal, Star, Flame, Target, Calendar, Clock, Award, TrendingUp, Zap, Brain } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function Home() {
-  const [activeSection, setActiveSection] = useState('overview');
-  const [userProgress, setUserProgress] = useState({
-    overall: 45,
-    grammar: 60,
-    vocabulary: 70,
-    conversation: 30,
-    exercisesCompleted: 8,
-    totalExercises: 15,
-    timeSpent: 127,
-    streak: 3
+  const [selectedLesson, setSelectedLesson] = useState<number | null>(null);
+  const [showLessonModal, setShowLessonModal] = useState(false);
+  const [, setLocation] = useLocation();
+
+  const { data: user } = useQuery({
+    queryKey: ["/api/user"],
   });
-  
-  const [recentActivities, setRecentActivities] = useState([
+
+  const { data: lessons = [] } = useQuery({
+    queryKey: ["/api/lessons"],
+  });
+
+  const { data: progress } = useQuery({
+    queryKey: ["/api/progress"],
+  });
+
+  const { data: dailyStats } = useQuery({
+    queryKey: ["/api/stats/daily"],
+  });
+
+  const categories = [
     {
-      id: '1',
-      type: 'grammar' as const,
-      description: 'Completed Simple Present Formation lesson',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-      score: 85
+      name: "Vocabulário",
+      description: "Aprenda novas palavras",
+      icon: BookOpen,
+      color: "cartoon-coral",
+      path: "/vocabulary",
+      lessons: (lessons as any[]).filter((l: any) => l.category === "vocabulary"),
     },
     {
-      id: '2',
-      type: 'vocabulary' as const,
-      description: 'Learned 5 new words from Module 1',
-      timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+      name: "Gramática",
+      description: "Domine as regras",
+      icon: Palette,
+      color: "cartoon-blue",
+      path: "/grammar",
+      lessons: (lessons as any[]).filter((l: any) => l.category === "grammar"),
     },
     {
-      id: '3',
-      type: 'exercise' as const,
-      description: 'Grammar exercise: Simple Present Tense',
-      timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-      score: 92
-    }
-  ]);
+      name: "Frases",
+      description: "Conversação prática",
+      icon: MessageCircle,
+      color: "cartoon-mint",
+      path: "/phrases",
+      lessons: (lessons as any[]).filter((l: any) => l.category === "phrases"),
+    },
+    {
+      name: "Pronúncia",
+      description: "Fale como um nativo",
+      icon: Mic,
+      color: "cartoon-yellow",
+      path: "/pronunciation",
+      lessons: (lessons as any[]).filter((l: any) => l.category === "pronunciation"),
+    },
+  ];
 
-  const { showTranslations, toggleTranslations } = useTranslation();
+  const achievements = [
+    { name: "Primeira Lição", icon: Medal, earned: true },
+    { name: "7 Dias Seguidos", icon: Flame, earned: true },
+    { name: "1000 XP", icon: Star, earned: true },
+    { name: "Mestre das Palavras", icon: Trophy, earned: false },
+  ];
 
-  const handleStartLesson = (type: string) => {
-    setActiveSection(type);
+  const openLesson = (lessonId: number) => {
+    setSelectedLesson(lessonId);
+    setShowLessonModal(true);
   };
 
-  const handleExerciseComplete = (result: any) => {
-    // Update progress and add to recent activities
-    const newActivity = {
-      id: Date.now().toString(),
-      type: 'exercise' as const,
-      description: `Completed exercise: ${result.exerciseId}`,
-      timestamp: new Date(),
-      score: result.isCorrect ? 100 : 0
-    };
-    
-    setRecentActivities(prev => [newActivity, ...prev.slice(0, 4)]);
-    
-    // Update overall progress
-    if (result.isCorrect) {
-      setUserProgress(prev => ({
-        ...prev,
-        exercisesCompleted: prev.exercisesCompleted + 1,
-        overall: Math.min(prev.overall + 2, 100)
-      }));
-    }
+  const closeLesson = () => {
+    setShowLessonModal(false);
+    setSelectedLesson(null);
   };
+
+  const dailyProgress = dailyStats ? ((dailyStats as any).lessonsCompleted / ((user as any)?.dailyGoal || 4)) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header 
-        progress={userProgress.overall} 
-        onToggleTranslation={toggleTranslations}
-        showTranslations={showTranslations}
-      />
-      
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        
-        {/* Module Header */}
-        <div className="academy-gradient rounded-xl p-8 mb-8 text-white">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center">
-            <div className="mb-6 lg:mb-0">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="secondary" className="bg-white/20 text-white">
-                  Módulo 1
-                </Badge>
-                <Badge variant="secondary" className="bg-white/20 text-white">
-                  Nível Iniciante
-                </Badge>
-              </div>
-              <h1 className="text-3xl lg:text-4xl font-bold mb-4">Simple Present Tense</h1>
-              <p className="text-xl text-blue-100 mb-6">Domine os fundamentos da gramática inglesa com aulas interativas e exercícios práticos</p>
-              
-              {/* Module Stats */}
-              <div className="flex flex-wrap gap-4">
-                <div className="flex items-center gap-2 bg-white/20 rounded-lg px-3 py-2">
-                  <Clock className="h-4 w-4" />
-                  <span className="text-sm">30-45 min</span>
-                </div>
-                <div className="flex items-center gap-2 bg-white/20 rounded-lg px-3 py-2">
-                  <GraduationCap className="h-4 w-4" />
-                  <span className="text-sm">Aprendizado Interativo</span>
-                </div>
-                <div className="flex items-center gap-2 bg-white/20 rounded-lg px-3 py-2">
-                  <Users className="h-4 w-4" />
-                  <span className="text-sm">Amigável para Iniciantes</span>
-                </div>
-                <div className="flex items-center gap-2 bg-white/20 rounded-lg px-3 py-2">
-                  <Star className="h-4 w-4" />
-                  <span className="text-sm">Tommy's Academy</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="text-center">
-              <div className="w-32 h-32 bg-white/20 rounded-full flex items-center justify-center mb-4">
-                <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center">
-                  <GraduationCap className="h-12 w-12 text-blue-600" />
-                </div>
-              </div>
-              <Button 
-                variant="secondary" 
-                size="lg"
-                onClick={() => setActiveSection('grammar')}
-                className="bg-white text-blue-600 hover:bg-gray-100"
-              >
-                Começar a Aprender
-              </Button>
-            </div>
+    <div className="min-h-screen bg-background pt-20 sm:pt-24 lg:pt-28">
+      <Header user={user as any} />
+
+      {/* Spacing between header and content */}
+      <div className="h-6"></div>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+        {/* Welcome Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8 sm:mb-12"
+        >
+          <div className="inline-block mb-3 sm:mb-4 floating-card">
+            <Mascot />
           </div>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold gradient-text mb-4 px-2">
+            Olá {(user as any)?.username}! Vamos aprender inglês hoje?
+          </h2>
+          <p className="text-base sm:text-lg lg:text-xl text-muted-foreground px-4 mb-6">Continue sua jornada de aprendizado com lições divertidas!</p>
+
+          
+        </motion.div>
+
+        {/* Quick Stats Dashboard */}
+        
+
+        {/* Main Navigation Cards */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8"
+        >
+          <Card className="cartoon-card group cursor-pointer overflow-hidden" onClick={() => setLocation("/lessons")}>
+            <CardContent className="p-0">
+              <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-6 text-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-white/10 transform rotate-12 translate-x-4 -translate-y-4 group-hover:translate-x-8 transition-transform duration-300"></div>
+                <div className="relative z-10">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                    <BookOpen className="text-white" size={32} />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Aulas</h3>
+                  <p className="text-blue-100 mb-4">Explore lições organizadas por categoria</p>
+                </div>
+              </div>
+              <div className="p-4">
+                <Button className="w-full cartoon-button-secondary">
+                  Ver Todas as Aulas
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="cartoon-card group cursor-pointer overflow-hidden" onClick={() => setLocation("/exercises")}>
+            <CardContent className="p-0">
+              <div className="bg-gradient-to-br from-orange-500 to-red-600 p-6 text-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-white/10 transform -rotate-12 -translate-x-4 translate-y-4 group-hover:-translate-x-8 transition-transform duration-300"></div>
+                <div className="relative z-10">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                    <Target className="text-white" size={32} />
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-2">Exercícios</h3>
+                  <p className="text-orange-100 mb-4">Pratique e teste seus conhecimentos</p>
+                </div>
+              </div>
+              <div className="p-4">
+                <Button className="w-full cartoon-button">
+                  Fazer Exercícios
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Lesson Categories */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8">
+          {categories.map((category, index) => {
+            const Icon = category.icon;
+            const completedLessons = category.lessons.filter((l: any) => l.completed).length;
+            const totalLessons = category.lessons.length;
+            const progressPercent = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
+
+            return (
+              <motion.div
+                key={category.name}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 + index * 0.1 }}
+                className={`cartoon-card border-${category.color} p-4 sm:p-6 cursor-pointer hover:shadow-lg transition-shadow`}
+                onClick={() => setLocation(category.path)}
+              >
+                <div className="flex items-center mb-3 sm:mb-4">
+                  <div className={`w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-${category.color} rounded-full flex items-center justify-center shadow-lg mr-3 sm:mr-4`}>
+                    <Icon className="text-white" size={24} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg sm:text-xl font-bold text-cartoon-dark">{category.name}</h3>
+                    <p className="text-sm sm:text-base text-gray-600">{category.description}</p>
+                  </div>
+                </div>
+                <div className="bg-cartoon-gray rounded-full h-2 sm:h-3 mb-2">
+                  <div 
+                    className={`bg-${category.color} h-2 sm:h-3 rounded-full transition-all duration-500`}
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+                <p className="text-xs sm:text-sm text-gray-600">
+                  {completedLessons} de {totalLessons} lições concluídas
+                </p>
+              </motion.div>
+            );
+          })}
         </div>
 
-        {/* Interactive Learning Sections */}
-        <Tabs value={activeSection} onValueChange={setActiveSection} className="space-y-8">
-          <TabsList className="grid grid-cols-2 lg:grid-cols-5 w-full">
-            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            <TabsTrigger value="grammar">Gramática</TabsTrigger>
-            <TabsTrigger value="vocabulary">Vocabulário</TabsTrigger>
-            <TabsTrigger value="conversation">Conversação</TabsTrigger>
-            <TabsTrigger value="exercises">Exercícios</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-8">
-            <InteractiveAvatar onStartLesson={handleStartLesson} />
-            <ProgressTracker progress={userProgress} recentActivities={recentActivities} />
-          </TabsContent>
-
-          <TabsContent value="grammar">
-            <GrammarLesson showTranslations={showTranslations} />
-          </TabsContent>
-
-          <TabsContent value="vocabulary">
-            <VocabularySection showTranslations={showTranslations} />
-          </TabsContent>
-
-          <TabsContent value="conversation">
-            <ConversationPractice showTranslations={showTranslations} />
-          </TabsContent>
-
-          <TabsContent value="exercises">
-            <ExerciseSection onExerciseComplete={handleExerciseComplete} />
-          </TabsContent>
-        </Tabs>
-
-        {/* Quick Navigation Cards */}
-        {activeSection === 'overview' && (
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-12">
-            <Card 
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => setActiveSection('grammar')}
-            >
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <GraduationCap className="h-6 w-6 text-blue-600" />
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Regras de Gramática</h3>
-                <p className="text-sm text-gray-600">Aprenda a formação do Simple Present</p>
-              </CardContent>
-            </Card>
-
-            <Card 
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => setActiveSection('vocabulary')}
-            >
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Star className="h-6 w-6 text-emerald-600" />
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Vocabulário</h3>
-                <p className="text-sm text-gray-600">10 palavras essenciais para aprender</p>
-              </CardContent>
-            </Card>
-
-            <Card 
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => setActiveSection('conversation')}
-            >
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Users className="h-6 w-6 text-amber-600" />
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Conversação</h3>
-                <p className="text-sm text-gray-600">Pratique perguntas de conversação</p>
-              </CardContent>
-            </Card>
-
-            <Card 
-              className="cursor-pointer hover:shadow-lg transition-shadow"
-              onClick={() => setActiveSection('exercises')}
-            >
-              <CardContent className="p-6 text-center">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <Clock className="h-6 w-6 text-purple-600" />
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-2">Exercícios</h3>
-                <p className="text-sm text-gray-600">Teste seus conhecimentos</p>
-              </CardContent>
-            </Card>
+        {/* Achievements Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="cartoon-card border-cartoon-teal mb-8 p-6"
+        >
+          <h3 className="text-xl font-bold text-cartoon-dark mb-4 flex items-center">
+            <Trophy className="text-cartoon-yellow mr-2" />
+            Suas Conquistas
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {achievements.map((achievement, index) => {
+              const Icon = achievement.icon;
+              return (
+                <motion.div 
+                  key={achievement.name}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.7 + index * 0.1 }}
+                  className={`text-center p-4 bg-cartoon-gray rounded-xl transition-all duration-300 hover:scale-110 ${
+                    achievement.earned ? "" : "opacity-50"
+                  }`}
+                >
+                  <div className={`w-16 h-16 ${
+                    achievement.earned 
+                      ? "bg-cartoon-yellow" 
+                      : "bg-gray-400"
+                  } rounded-full flex items-center justify-center shadow-lg mx-auto mb-2`}>
+                    <Icon className="text-white text-2xl" size={24} />
+                  </div>
+                  <p className={`font-semibold text-sm ${
+                    achievement.earned 
+                      ? "text-cartoon-dark" 
+                      : "text-gray-500"
+                  }`}>
+                    {achievement.name}
+                  </p>
+                </motion.div>
+              );
+            })}
           </div>
-        )}
+        </motion.div>
+
+        {/* Continue Learning Button */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className="text-center"
+        >
+          <Button 
+            className="cartoon-button text-xl py-4 px-8 animate-pulse"
+            onClick={() => {
+              const nextLesson = (lessons as any[]).find((l: any) => !l.completed);
+              if (nextLesson) {
+                openLesson(nextLesson.id);
+              }
+            }}
+          >
+            ▶ Continuar Aprendendo
+          </Button>
+        </motion.div>
       </main>
+
+      {/* Lesson Modal */}
+      {showLessonModal && selectedLesson && (
+        <LessonModal
+          lessonId={selectedLesson}
+          onClose={closeLesson}
+        />
+      )}
     </div>
   );
 }

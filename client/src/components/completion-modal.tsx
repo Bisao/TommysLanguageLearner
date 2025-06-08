@@ -1,0 +1,153 @@
+import { motion } from "framer-motion";
+import { Trophy } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+
+interface CompletionModalProps {
+  results: {
+    score: number;
+    totalQuestions: number;
+    xpEarned: number;
+    correct: number;
+    incorrect: number;
+  };
+  lessonTitle: string;
+  currentLessonId: number;
+  onNextLesson: (nextLessonId: number | null) => void;
+  onBackToHome: () => void;
+}
+
+export default function CompletionModal({ 
+  results, 
+  lessonTitle, 
+  currentLessonId,
+  onNextLesson, 
+  onBackToHome 
+}: CompletionModalProps) {
+  const isPassed = results.score >= 70;
+
+  // Get all lessons and progress to find next uncompleted lesson
+  const { data: lessons } = useQuery({
+    queryKey: ["/api/lessons"],
+  });
+
+  const { data: progressData } = useQuery({
+    queryKey: ["/api/progress"],
+  });
+
+  const findNextLesson = () => {
+    if (!lessons || !progressData?.progress) return null;
+
+    // Sort lessons by ID and find the next lesson that hasn't been completed
+    const sortedLessons = [...lessons].sort((a: any, b: any) => a.id - b.id);
+    const nextLesson = sortedLessons.find((lesson: any) => {
+      const lessonProgress = progressData.progress.find((p: any) => p.lessonId === lesson.id);
+      return lesson.id > currentLessonId && (!lessonProgress || !lessonProgress.completed);
+    });
+
+    return nextLesson ? nextLesson.id : null;
+  };
+
+  const nextLessonId = findNextLesson();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
+    >
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.8, opacity: 0 }}
+        className="bg-white rounded-2xl shadow-2xl border-4 border-cartoon-yellow max-w-md w-full text-center p-8"
+      >
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1, rotate: 360 }}
+          transition={{ delay: 0.2, type: "spring", stiffness: 200, duration: 1 }}
+          className="w-32 h-32 bg-cartoon-yellow rounded-full flex items-center justify-center mx-auto mb-4 bounce-gentle"
+        >
+          <Trophy className="text-white" size={64} />
+        </motion.div>
+
+        <h3 className="text-3xl font-bold text-cartoon-dark mb-2">
+          {isPassed ? "Parabéns! 🎊" : "Quase lá! 💪"}
+        </h3>
+        <p className="text-gray-600 mb-4">
+          {isPassed 
+            ? `Você completou a lição "${lessonTitle}"`
+            : `Continue praticando a lição "${lessonTitle}"`
+          }
+        </p>
+
+        {/* Stats */}
+        <div className="bg-cartoon-gray rounded-xl p-4 mb-6">
+          <div className="grid grid-cols-2 gap-4 text-center">
+            <div>
+              <div className="text-2xl font-bold text-cartoon-dark">{results.correct}</div>
+              <div className="text-sm text-gray-600">Corretas</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-cartoon-red">{results.incorrect}</div>
+              <div className="text-sm text-gray-600">Incorretas</div>
+            </div>
+          </div>
+          <div className="mt-4 text-center">
+            <div className="text-xl font-bold text-cartoon-dark">{results.score}%</div>
+            <div className="text-sm text-gray-600">Pontuação</div>
+          </div>
+        </div>
+
+        {/* XP Earned */}
+        {isPassed && (
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.5 }}
+            className="bg-cartoon-mint rounded-xl p-4 mb-6"
+          >
+            <div className="text-3xl font-bold text-white mb-1">+{results.xpEarned} XP</div>
+            <div className="text-cartoon-dark font-semibold">Experiência Ganha</div>
+          </motion.div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="space-y-3">
+          {isPassed ? (
+            nextLessonId ? (
+              <Button
+                onClick={() => onNextLesson(nextLessonId)}
+                className="w-full cartoon-button transform hover:scale-105 transition-all"
+              >
+                Próxima Lição
+              </Button>
+            ) : (
+              <Button
+                onClick={onBackToHome}
+                className="w-full cartoon-button transform hover:scale-105 transition-all"
+              >
+                Parabéns! Você completou todas as lições!
+              </Button>
+            )
+          ) : (
+            <Button
+              onClick={onBackToHome}
+              className="w-full cartoon-button transform hover:scale-105 transition-all"
+            >
+              Tentar Novamente
+            </Button>
+          )}
+          <Button
+            onClick={onBackToHome}
+            variant="outline"
+            className="w-full"
+          >
+            Voltar ao Início
+          </Button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
