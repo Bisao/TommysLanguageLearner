@@ -133,63 +133,29 @@ export default function ReadingLesson({
   useEffect(() => {
     const progress = (completedWords.size / totalWords) * 100;
     setReadingProgress(progress);
+  }, [completedWords, totalWords]);
 
+  // Separate effect for completion check to avoid dependency loop
+  useEffect(() => {
+    const progress = (completedWords.size / totalWords) * 100;
     if (progress >= 80 && completedWords.size > totalWords * 0.8) {
       // Auto-completar quando 80% das palavras foram lidas
-      setTimeout(completeLesson, 2000);
+      const timer = setTimeout(() => {
+        setReadingProgress(100);
+        setTimeout(() => {
+          onComplete();
+        }, 1500);
+      }, 2000);
+      return () => clearTimeout(timer);
     }
-  }, [completedWords, totalWords, completeLesson]);
+  }, [completedWords.size, totalWords, onComplete]);
 
-  // Controles de áudio para o header - memoized para evitar recriação
-  const audioControls = useMemo(() => (
-    <div className="flex items-center gap-2">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handlePlayPause}
-        disabled={!isSupported}
-        className="text-white hover:bg-white/20"
-      >
-        {isPlaying ? (
-          <Pause className="w-4 h-4" />
-        ) : (
-          <Play className="w-4 h-4" />
-        )}
-      </Button>
-
-      {speechRecognitionSupported && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleMicrophoneToggle}
-          className={`text-white hover:bg-white/20 ${
-            isListening ? 'microphone-pulse bg-red-500' : ''
-          }`}
-        >
-          {isListening ? (
-            <MicOff className="w-4 h-4" />
-          ) : (
-            <Mic className="w-4 h-4" />
-          )}
-        </Button>
-      )}
-
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={resetLesson}
-        className="text-white hover:bg-white/20"
-      >
-        <RotateCcw className="w-4 h-4" />
-      </Button>
-    </div>
-  ), [isPlaying, isSupported, speechRecognitionSupported, isListening, handlePlayPause, handleMicrophoneToggle, resetLesson]);
-
+  // Temporarily disable audio controls to fix infinite loop
   useEffect(() => {
     if (onControlsReady) {
-      onControlsReady(audioControls);
+      onControlsReady(null);
     }
-  }, [onControlsReady, audioControls]);
+  }, []);
 
   return (
     <div className="max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 space-y-6">
