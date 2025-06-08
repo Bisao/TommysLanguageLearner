@@ -1,10 +1,3 @@
-/**
- * Camada de acesso a dados
- * 
- * Este módulo fornece uma interface para acessar e manipular dados
- * no banco de dados, com implementações para memória e banco de dados.
- */
-
 import { 
   users, 
   lessons, 
@@ -22,41 +15,33 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
-import { hashPassword, comparePasswords } from "./utils/auth";
-import { log, error } from "./utils/logger";
+import { calculateRealisticUserData, getLastActiveDate } from "./user-utils";
 
-/**
- * Interface para a camada de acesso a dados
- */
 export interface IStorage {
-  // Métodos de usuário
+  // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   authenticateUser(username: string, password: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User | undefined>;
   
-  // Métodos de lição
+  // Lesson methods
   getAllLessons(): Promise<Lesson[]>;
   getLessonsByCategory(category: string): Promise<Lesson[]>;
   getLesson(id: number): Promise<Lesson | undefined>;
   createLesson(lesson: InsertLesson): Promise<Lesson>;
   
-  // Métodos de progresso
+  // Progress methods
   getUserProgress(userId: number): Promise<UserProgress[]>;
   getLessonProgress(userId: number, lessonId: number): Promise<UserProgress | undefined>;
   updateProgress(userId: number, lessonId: number, progress: Partial<UserProgress>): Promise<UserProgress>;
   
-  // Métodos de estatísticas
+  // Stats methods
   getUserStats(userId: number, date: string): Promise<UserStats | undefined>;
   updateStats(userId: number, date: string, stats: Partial<UserStats>): Promise<UserStats>;
   getUserOverallStats(userId: number): Promise<{totalXP: number, lessonsCompleted: number, streak: number}>;
 }
 
-/**
- * Implementação de armazenamento em memória
- * Útil para desenvolvimento e testes
- */
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private lessons: Map<number, Lesson>;
@@ -80,11 +65,8 @@ export class MemStorage implements IStorage {
     this.seedData();
   }
 
-  /**
-   * Popula o armazenamento com dados iniciais
-   */
   private seedData() {
-    // Cria usuário padrão
+    // Create default user
     const defaultUser: User = {
       id: 1,
       username: "learner",
@@ -96,12 +78,11 @@ export class MemStorage implements IStorage {
       dailyGoal: 15,
       lastActiveDate: new Date().toISOString().split('T')[0],
       achievements: ["first_lesson", "week_warrior", "vocabulary_master"],
-      createdAt: new Date()
     };
     this.users.set(1, defaultUser);
     this.currentUserId = 2;
 
-    // Cria lições baseadas em materiais do NYT
+    // Create lessons based on NYT materials
     const sampleLessons: Lesson[] = [
       {
         id: 1,
@@ -341,7 +322,7 @@ export class MemStorage implements IStorage {
 
   async authenticateUser(username: string, password: string): Promise<User | undefined> {
     const user = await this.getUserByUsername(username);
-    if (user && await comparePasswords(password, user.password)) {
+    if (user && user.password === password) {
       return user;
     }
     return undefined;
@@ -349,18 +330,15 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentUserId++;
-    const hashedPassword = await hashPassword(insertUser.password);
     const user: User = { 
       ...insertUser, 
-      password: hashedPassword,
       id,
       streak: 0,
       totalXP: 0,
       level: 1,
       dailyGoal: 15,
       lastActiveDate: null,
-      achievements: [],
-      createdAt: new Date()
+      achievements: []
     };
     this.users.set(id, user);
     return user;
@@ -373,8 +351,8 @@ export class MemStorage implements IStorage {
     const updatedUser = { ...user, ...updates };
     this.users.set(id, updatedUser);
     
-    // Log de atualizações para depuração
-    log(`User ${id} updated: ${JSON.stringify(updates)}`);
+    // Log updates for debugging
+    console.log(`User ${id} updated:`, updates);
     
     return updatedUser;
   }
@@ -477,283 +455,162 @@ export class MemStorage implements IStorage {
   }
 }
 
-/**
- * Implementação de armazenamento em banco de dados
- * Utiliza Drizzle ORM para acesso ao banco de dados
- */
+// rewrite MemStorage to DatabaseStorage
 export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
-    try {
-      const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
-      return result[0];
-    } catch (err) {
-      error(`Error fetching user ${id}`, err);
-      throw err;
-    }
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    try {
-      const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
-      return result[0];
-    } catch (err) {
-      error(`Error fetching user by username ${username}`, err);
-      throw err;
-    }
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
   }
 
   async authenticateUser(username: string, password: string): Promise<User | undefined> {
-    try {
-      const user = await this.getUserByUsername(username);
-      if (user && await comparePasswords(password, user.password)) {
-        return user;
-      }
-      return undefined;
-    } catch (err) {
-      error(`Error authenticating user ${username}`, err);
-      throw err;
-    }
+    const [user] = await db.select().from(users)
+      .where(and(eq(users.username, username), eq(users.password, password)));
+    return user || undefined;
   }
 
-  async createUser(user: InsertUser): Promise<User> {
-    try {
-      const hashedPassword = await hashPassword(user.password);
-      const result = await db.insert(users).values({
-        ...user,
-        password: hashedPassword,
-        streak: 0,
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values({
+        ...insertUser,
         totalXP: 0,
         level: 1,
-        dailyGoal: 15,
-        lastActiveDate: null,
+        streak: 0,
         achievements: [],
-        createdAt: new Date()
-      }).returning();
-      
-      return result[0];
-    } catch (err) {
-      error(`Error creating user ${user.username}`, err);
-      throw err;
-    }
+        lastActiveDate: new Date().toISOString().split('T')[0]
+      })
+      .returning();
+    return user;
   }
 
   async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
     try {
-      const result = await db.update(users)
+      const [user] = await db
+        .update(users)
         .set(updates)
         .where(eq(users.id, id))
         .returning();
       
-      return result[0];
-    } catch (err) {
-      error(`Error updating user ${id}`, err);
-      throw err;
+      // Log updates for debugging
+      console.log(`User ${id} updated in database:`, updates);
+      
+      return user || undefined;
+    } catch (error) {
+      console.error(`Error updating user ${id}:`, error);
+      throw error;
     }
   }
 
   async getAllLessons(): Promise<Lesson[]> {
-    try {
-      return await db.select().from(lessons).orderBy(lessons.order);
-    } catch (err) {
-      error("Error fetching all lessons", err);
-      throw err;
-    }
+    return await db.select().from(lessons).orderBy(lessons.order);
   }
 
   async getLessonsByCategory(category: string): Promise<Lesson[]> {
-    try {
-      return await db.select()
-        .from(lessons)
-        .where(eq(lessons.category, category))
-        .orderBy(lessons.order);
-    } catch (err) {
-      error(`Error fetching lessons by category ${category}`, err);
-      throw err;
-    }
+    return await db.select().from(lessons)
+      .where(eq(lessons.category, category))
+      .orderBy(lessons.order);
   }
 
   async getLesson(id: number): Promise<Lesson | undefined> {
-    try {
-      const result = await db.select().from(lessons).where(eq(lessons.id, id)).limit(1);
-      return result[0];
-    } catch (err) {
-      error(`Error fetching lesson ${id}`, err);
-      throw err;
-    }
+    const [lesson] = await db.select().from(lessons).where(eq(lessons.id, id));
+    return lesson || undefined;
   }
 
-  async createLesson(lesson: InsertLesson): Promise<Lesson> {
-    try {
-      const result = await db.insert(lessons).values({
-        ...lesson,
-        level: lesson.level ?? 1,
-        xpReward: lesson.xpReward ?? 10,
-        isLocked: lesson.isLocked ?? false
-      }).returning();
-      
-      return result[0];
-    } catch (err) {
-      error(`Error creating lesson ${lesson.title}`, err);
-      throw err;
-    }
+  async createLesson(insertLesson: InsertLesson): Promise<Lesson> {
+    const [lesson] = await db
+      .insert(lessons)
+      .values(insertLesson)
+      .returning();
+    return lesson;
   }
 
   async getUserProgress(userId: number): Promise<UserProgress[]> {
-    try {
-      return await db.select()
-        .from(userProgress)
-        .where(eq(userProgress.userId, userId));
-    } catch (err) {
-      error(`Error fetching progress for user ${userId}`, err);
-      throw err;
-    }
+    return await db.select().from(userProgress)
+      .where(eq(userProgress.userId, userId));
   }
 
   async getLessonProgress(userId: number, lessonId: number): Promise<UserProgress | undefined> {
-    try {
-      const result = await db.select()
-        .from(userProgress)
-        .where(and(
-          eq(userProgress.userId, userId),
-          eq(userProgress.lessonId, lessonId)
-        ))
-        .limit(1);
-      
-      return result[0];
-    } catch (err) {
-      error(`Error fetching progress for user ${userId} and lesson ${lessonId}`, err);
-      throw err;
-    }
+    const [progress] = await db.select().from(userProgress)
+      .where(and(eq(userProgress.userId, userId), eq(userProgress.lessonId, lessonId)));
+    return progress || undefined;
   }
 
-  async updateProgress(userId: number, lessonId: number, progress: Partial<UserProgress>): Promise<UserProgress> {
-    try {
-      // Verifica se o progresso já existe
-      const existing = await this.getLessonProgress(userId, lessonId);
-      
-      if (existing) {
-        // Atualiza o progresso existente
-        const result = await db.update(userProgress)
-          .set(progress)
-          .where(and(
-            eq(userProgress.userId, userId),
-            eq(userProgress.lessonId, lessonId)
-          ))
-          .returning();
-        
-        return result[0];
-      } else {
-        // Cria um novo progresso
-        const result = await db.insert(userProgress).values({
+  async updateProgress(userId: number, lessonId: number, progressUpdates: Partial<UserProgress>): Promise<UserProgress> {
+    const existing = await this.getLessonProgress(userId, lessonId);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(userProgress)
+        .set(progressUpdates)
+        .where(and(eq(userProgress.userId, userId), eq(userProgress.lessonId, lessonId)))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(userProgress)
+        .values({
           userId,
           lessonId,
           completed: false,
           score: 0,
           timeSpent: 0,
           attempts: 0,
-          lastAttempt: new Date(),
-          ...progress
-        }).returning();
-        
-        return result[0];
-      }
-    } catch (err) {
-      error(`Error updating progress for user ${userId} and lesson ${lessonId}`, err);
-      throw err;
+          ...progressUpdates
+        })
+        .returning();
+      return created;
     }
   }
 
   async getUserStats(userId: number, date: string): Promise<UserStats | undefined> {
-    try {
-      const result = await db.select()
-        .from(userStats)
-        .where(and(
-          eq(userStats.userId, userId),
-          eq(userStats.date, date)
-        ))
-        .limit(1);
-      
-      return result[0];
-    } catch (err) {
-      error(`Error fetching stats for user ${userId} on ${date}`, err);
-      throw err;
-    }
+    const [stats] = await db.select().from(userStats)
+      .where(and(eq(userStats.userId, userId), eq(userStats.date, date)));
+    return stats || undefined;
   }
 
-  async updateStats(userId: number, date: string, stats: Partial<UserStats>): Promise<UserStats> {
-    try {
-      // Verifica se as estatísticas já existem
-      const existing = await this.getUserStats(userId, date);
-      
-      if (existing) {
-        // Atualiza as estatísticas existentes
-        const result = await db.update(userStats)
-          .set(stats)
-          .where(and(
-            eq(userStats.userId, userId),
-            eq(userStats.date, date)
-          ))
-          .returning();
-        
-        return result[0];
-      } else {
-        // Cria novas estatísticas
-        const result = await db.insert(userStats).values({
+  async updateStats(userId: number, date: string, statsUpdates: Partial<UserStats>): Promise<UserStats> {
+    const existing = await this.getUserStats(userId, date);
+    
+    if (existing) {
+      const [updated] = await db
+        .update(userStats)
+        .set(statsUpdates)
+        .where(and(eq(userStats.userId, userId), eq(userStats.date, date)))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(userStats)
+        .values({
           userId,
           date,
           lessonsCompleted: 0,
           xpEarned: 0,
           timeSpent: 0,
-          ...stats
-        }).returning();
-        
-        return result[0];
-      }
-    } catch (err) {
-      error(`Error updating stats for user ${userId} on ${date}`, err);
-      throw err;
+          ...statsUpdates
+        })
+        .returning();
+      return created;
     }
   }
 
   async getUserOverallStats(userId: number): Promise<{totalXP: number, lessonsCompleted: number, streak: number}> {
-    try {
-      // Obtém o usuário
-      const user = await this.getUser(userId);
-      
-      if (!user) {
-        return {
-          totalXP: 0,
-          lessonsCompleted: 0,
-          streak: 0
-        };
-      }
-      
-      // Conta lições completadas
-      const completedLessons = await db.select({ count: userProgress.id })
-        .from(userProgress)
-        .where(and(
-          eq(userProgress.userId, userId),
-          eq(userProgress.completed, true)
-        ));
-      
-      const lessonsCompleted = completedLessons[0]?.count || 0;
-      
-      return {
-        totalXP: user.totalXP || 0,
-        lessonsCompleted: Number(lessonsCompleted),
-        streak: user.streak || 0
-      };
-    } catch (err) {
-      error(`Error fetching overall stats for user ${userId}`, err);
-      throw err;
-    }
+    const user = await this.getUser(userId);
+    const userProgressList = await this.getUserProgress(userId);
+    
+    const lessonsCompleted = userProgressList.filter(p => p.completed).length;
+    
+    return {
+      totalXP: user?.totalXP || 0,
+      lessonsCompleted,
+      streak: user?.streak || 0
+    };
   }
 }
 
-// Exporta a implementação de armazenamento apropriada
-// Em produção, usaria DatabaseStorage
-// Em desenvolvimento ou testes, pode usar MemStorage
-export const storage = process.env.NODE_ENV === 'test' 
-  ? new MemStorage() 
-  : new MemStorage(); // Temporariamente usando MemStorage até configurar o banco de dados
-
+export const storage = new DatabaseStorage();

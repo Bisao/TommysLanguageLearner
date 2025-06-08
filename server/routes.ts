@@ -3,59 +3,31 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertUserProgressSchema, insertUserStatsSchema } from "@shared/schema";
 import { z } from "zod";
-import { body, param, validationResult } from "express-validator";
 
-/**
- * Configuração das rotas da API do Tommy's Academy
- * 
- * Este arquivo define todas as rotas HTTP da aplicação, incluindo:
- * - Autenticação de usuários (login, registro, guest, logout)
- * - Gerenciamento de perfil de usuário
- * - Sistema de lições e exercícios
- * - Tracking de progresso e estatísticas
- * - Sistema de gamificação (XP, levels, streaks)
- */
-
-// Schema de validação para submissão de respostas de exercícios
 const submitAnswerSchema = z.object({
-  lessonId: z.number().positive(), // ID da lição
-  questionId: z.string().min(1), // ID único da pergunta
-  answer: z.string().min(1), // Resposta do usuário
-  timeSpent: z.number().positive().optional(), // Tempo gasto em milissegundos
+  lessonId: z.number(),
+  questionId: z.string(),
+  answer: z.string(),
+  timeSpent: z.number().optional(),
 });
 
-// Schema de validação para completar lições/quizzes
 const completeQuizSchema = z.object({
-  lessonId: z.number().positive(), // ID da lição
-  score: z.number().min(0).max(100), // Pontuação obtida (0-100)
-  totalQuestions: z.number().positive(), // Total de perguntas na lição
-  timeSpent: z.number().positive(), // Tempo total gasto em milissegundos
+  lessonId: z.number(),
+  score: z.number(),
+  totalQuestions: z.number(),
+  timeSpent: z.number(),
 });
 
-// Schema de validação para login
 const loginSchema = z.object({
-  username: z.string().min(1), // Nome de usuário
-  password: z.string().min(1), // Senha
+  username: z.string(),
+  password: z.string(),
 });
 
-// Schema de validação para registro de usuário
 const registerSchema = z.object({
-  username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/, "Username deve conter apenas letras, números e underscores"),
-  email: z.string().email("Email deve ter formato válido"),
-  password: z.string().min(8, "Senha deve ter pelo menos 8 caracteres").max(100),
+  username: z.string(),
+  email: z.string().email(),
+  password: z.string().min(6),
 });
-
-// Input validation middleware
-const validateRequest = (req: any, res: any, next: any) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ 
-      message: "Validation failed", 
-      errors: errors.array() 
-    });
-  }
-  next();
-};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
@@ -72,8 +44,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`Authentication successful for username: ${username}`);
-      // Store user session
-      (req.session as any).userId = user.id;
+      // Store user session (simplified - in production use proper session management)
+      req.session = { userId: user.id };
 
       res.json({ user: { ...user, password: undefined } });
     } catch (error) {
@@ -95,7 +67,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.createUser(userData);
 
       // Store user session
-      (req.session as any).userId = user.id;
+      req.session = { userId: user.id };
 
       res.json({ user: { ...user, password: undefined } });
     } catch (error) {
@@ -118,7 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Store user session
-      (req.session as any).userId = guestUser.id;
+      req.session = { userId: guestUser.id };
 
       res.json({ user: { ...guestUser, password: undefined } });
     } catch (error) {
@@ -130,7 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Update user profile data in real-time
   app.patch("/api/user/profile", async (req, res) => {
     try {
-      const userId = (req.session as any)?.userId || 1;
+      const userId = req.session?.userId || 1;
       const updates = req.body;
       
       // Only allow certain fields to be updated
