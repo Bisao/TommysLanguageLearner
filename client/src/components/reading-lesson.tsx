@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,7 +44,7 @@ export default function ReadingLesson({
   const [readingMode, setReadingMode] = useState<'normal' | 'guided' | 'practice'>('normal');
   const [completedWords, setCompletedWords] = useState<Set<number>>(new Set());
   const [showTranslation, setShowTranslation] = useState(false);
-  
+
   const textRef = useRef<HTMLDivElement>(null);
   const { speak, stop: stopSpeaking, isSupported } = useSpeech();
   const { 
@@ -77,7 +76,12 @@ export default function ReadingLesson({
       if (readingMode === 'guided') {
         startGuidedReading();
       } else {
-        speak(text);
+        // Natural reading of full text with improved settings
+        speak(text, {
+          rate: 0.85, // Natural speaking pace
+          pitch: 1.0,
+          volume: 0.9
+        });
       }
     }
   }, [isPlaying, readingMode, text, speak, stopSpeaking]);
@@ -129,7 +133,7 @@ export default function ReadingLesson({
   useEffect(() => {
     const progress = (completedWords.size / totalWords) * 100;
     setReadingProgress(progress);
-    
+
     if (progress >= 80 && completedWords.size > totalWords * 0.8) {
       // Auto-completar quando 80% das palavras foram lidas
       setTimeout(completeLesson, 2000);
@@ -152,7 +156,7 @@ export default function ReadingLesson({
           <Play className="w-4 h-4" />
         )}
       </Button>
-      
+
       {speechRecognitionSupported && (
         <Button
           variant="ghost"
@@ -169,7 +173,7 @@ export default function ReadingLesson({
           )}
         </Button>
       )}
-      
+
       <Button
         variant="ghost"
         size="sm"
@@ -258,7 +262,7 @@ export default function ReadingLesson({
             <CardTitle className="text-2xl sm:text-3xl gradient-text-reading mb-4">
               {title}
             </CardTitle>
-            
+
             {/* Reading Controls */}
             <div className="flex flex-wrap justify-center gap-3 mb-4">
               <Button
@@ -346,7 +350,7 @@ export default function ReadingLesson({
               {words.map((word, index) => {
                 const isCurrentWord = currentWordIndex === index;
                 const isCompleted = completedWords.has(index);
-                
+
                 return (
                   <motion.span
                     key={index}
