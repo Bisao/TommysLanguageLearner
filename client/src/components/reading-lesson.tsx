@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/button';
@@ -39,7 +40,7 @@ export default function ReadingLesson({ lesson, onComplete }: ReadingLessonProps
   const [translationPosition, setTranslationPosition] = useState({ x: 0, y: 0 });
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const hasInitialized = useRef(false);
+  const lastTranscriptRef = useRef('');
 
   const { 
     transcript, 
@@ -51,7 +52,7 @@ export default function ReadingLesson({ lesson, onComplete }: ReadingLessonProps
 
   const { playAudio, isPlaying, pauseAudio } = useAudio();
 
-  // Initialize word statuses only once
+  // Initialize word statuses only once when lesson changes
   const initialWordStatuses = useMemo(() => {
     if (!lesson?.text) return [];
 
@@ -62,12 +63,12 @@ export default function ReadingLesson({ lesson, onComplete }: ReadingLessonProps
     }));
   }, [lesson?.text]);
 
-  // Initialize component state
+  // Initialize word statuses when lesson changes
   useEffect(() => {
-    if (!hasInitialized.current && initialWordStatuses.length > 0) {
-      setWordStatuses(initialWordStatuses);
-      hasInitialized.current = true;
-    }
+    setWordStatuses(initialWordStatuses);
+    setUserTranscript('');
+    setAccuracyScore(0);
+    lastTranscriptRef.current = '';
   }, [initialWordStatuses]);
 
   // Timer effect
@@ -90,14 +91,6 @@ export default function ReadingLesson({ lesson, onComplete }: ReadingLessonProps
       }
     };
   }, [isReading]);
-
-  // Handle transcript updates
-  useEffect(() => {
-    if (transcript && transcript !== userTranscript) {
-      setUserTranscript(transcript);
-      updateWordAccuracy(transcript);
-    }
-  }, [transcript, userTranscript]);
 
   // Calculate similarity between two words
   const calculateSimilarity = useCallback((word1: string, word2: string): number => {
@@ -137,12 +130,9 @@ export default function ReadingLesson({ lesson, onComplete }: ReadingLessonProps
   }, []);
 
   // Update word accuracy based on speech transcript
-  const updateWordAccuracy = useCallback((transcript: string) => {
-    if (!lesson?.text || wordStatuses.length === 0) return;
-
+  const updateWordAccuracy = useCallback((transcript: string, textWords: string[]) => {
     const spokenWords = transcript.toLowerCase().split(/\s+/).filter(word => word.length > 0);
-    const textWords = lesson.text.split(/\s+/).filter(word => word.length > 0);
-
+    
     setWordStatuses(prevStatuses => {
       const newStatuses = [...prevStatuses];
 
@@ -171,26 +161,26 @@ export default function ReadingLesson({ lesson, onComplete }: ReadingLessonProps
 
       return newStatuses;
     });
-  }, [lesson?.text, wordStatuses.length, calculateSimilarity]);
+  }, [calculateSimilarity]);
 
   // Calculate reading progress
-  const calculateProgress = useCallback((transcript: string): number => {
-    if (!lesson?.text) return 0;
-
-    const totalWords = lesson.text.split(/\s+/).length;
+  const calculateProgress = useCallback((transcript: string, totalWords: number): number => {
     const spokenWords = transcript.split(/\s+/).filter(word => word.length > 0).length;
-
     return Math.min((spokenWords / totalWords) * 100, 100);
-  }, [lesson?.text]);
+  }, []);
 
-  // Update accuracy score
+  // Handle transcript updates - only when transcript actually changes
   useEffect(() => {
-    if (userTranscript && lesson?.text) {
-      const progress = calculateProgress(userTranscript);
+    if (transcript && transcript !== lastTranscriptRef.current && lesson?.text) {
+      lastTranscriptRef.current = transcript;
+      setUserTranscript(transcript);
+      
+      const textWords = lesson.text.split(/\s+/).filter(word => word.length > 0);
+      const progress = calculateProgress(transcript, textWords.length);
       setAccuracyScore(progress);
-      updateWordAccuracy(userTranscript);
+      updateWordAccuracy(transcript, textWords);
     }
-  }, [userTranscript, lesson?.text, calculateProgress, updateWordAccuracy]);
+  }, [transcript, lesson?.text, calculateProgress, updateWordAccuracy]);
 
   // Start guided reading
   const startGuidedReading = useCallback(() => {
@@ -198,6 +188,7 @@ export default function ReadingLesson({ lesson, onComplete }: ReadingLessonProps
     setCurrentTime(0);
     setUserTranscript('');
     setAccuracyScore(0);
+    lastTranscriptRef.current = '';
 
     if (speechSupported) {
       startListening();
@@ -227,6 +218,7 @@ export default function ReadingLesson({ lesson, onComplete }: ReadingLessonProps
     setAccuracyScore(0);
     setIsComplete(false);
     setWordStatuses(initialWordStatuses);
+    lastTranscriptRef.current = '';
     stopListening();
   }, [initialWordStatuses, stopListening]);
 
