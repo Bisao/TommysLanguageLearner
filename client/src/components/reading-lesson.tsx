@@ -67,68 +67,19 @@ export default function ReadingLesson({
     }
   }, [speak, isSupported]);
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
   const startGuidedReading = useCallback(() => {
-    // Clear any existing interval
-    if (intervalRef.current) {
-      clearTimeout(intervalRef.current);
-      intervalRef.current = null;
-    }
-
-    // Use natural speech synthesis but highlight words as we go
-    const fullText = text;
-    
-    // Create utterance for natural flow
-    const utterance = new SpeechSynthesisUtterance(fullText);
-    utterance.rate = 0.8;
-    utterance.pitch = 1.0;
-    utterance.volume = 0.8;
-    utterance.lang = 'en-US';
-
-    let currentIndex = 0;
-    
-    // Function to highlight words as speech progresses
-    const highlightWords = () => {
-      if (currentIndex < allWords.length && isPlaying) {
-        setCurrentWordIndex(currentIndex);
-        setCompletedWords(prev => new Set(prev).add(currentIndex));
-        currentIndex++;
-        
-        // Schedule next word highlight based on speech rate
-        const averageWordsPerMinute = 140; // Natural reading speed
-        const msPerWord = (60 / averageWordsPerMinute) * 1000;
-        intervalRef.current = setTimeout(highlightWords, msPerWord);
+    // Use the useSpeech hook with word boundary callback for perfect sync
+    speak(text, {
+      rate: 0.8,
+      pitch: 1.0,
+      volume: 0.8,
+      onWordBoundary: (word: string, wordIndex: number) => {
+        // Highlight the current word being spoken
+        setCurrentWordIndex(wordIndex);
+        setCompletedWords(prev => new Set(prev).add(wordIndex));
       }
-    };
-
-    utterance.onstart = () => {
-      setCurrentWordIndex(0);
-      // Start highlighting words
-      highlightWords();
-    };
-
-    utterance.onend = () => {
-      setIsPlaying(false);
-      setCurrentWordIndex(-1);
-      if (intervalRef.current) {
-        clearTimeout(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-
-    utterance.onerror = () => {
-      setIsPlaying(false);
-      setCurrentWordIndex(-1);
-      if (intervalRef.current) {
-        clearTimeout(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-
-    // Start natural speech
-    speechSynthesis.speak(utterance);
-  }, [allWords, text, isPlaying]);
+    });
+  }, [text, speak]);
 
 
   const handlePlayPause = useCallback(() => {
@@ -157,15 +108,7 @@ export default function ReadingLesson({
     }
   }, [isPlaying, readingMode, text, speak, stopSpeaking, startGuidedReading]);
 
-  // Cleanup interval on unmount
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) {
-        clearTimeout(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, []);
+  
 
   const handleMicrophoneToggle = useCallback(() => {
     if (isListening) {
@@ -178,12 +121,8 @@ export default function ReadingLesson({
   }, [isListening, startListening, stopListening]);
 
   const resetLesson = useCallback(() => {
-    // Stop all audio and timeouts
+    // Stop all audio
     stopSpeaking();
-    if (intervalRef.current) {
-      clearTimeout(intervalRef.current);
-      intervalRef.current = null;
-    }
 
     // Reset all states
     setIsPlaying(false);
