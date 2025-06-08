@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -140,8 +140,8 @@ export default function ReadingLesson({
     }
   }, [completedWords, totalWords, completeLesson]);
 
-  // Controles de áudio para o header
-  const audioControls = (
+  // Controles de áudio para o header - memoized para evitar recriação
+  const audioControls = useMemo(() => (
     <div className="flex items-center gap-2">
       <Button
         variant="ghost"
@@ -183,7 +183,7 @@ export default function ReadingLesson({
         <RotateCcw className="w-4 h-4" />
       </Button>
     </div>
-  );
+  ), [isPlaying, isSupported, speechRecognitionSupported, isListening, handlePlayPause, handleMicrophoneToggle, resetLesson]);
 
   useEffect(() => {
     if (onControlsReady) {
