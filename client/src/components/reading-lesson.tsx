@@ -70,46 +70,65 @@ export default function ReadingLesson({
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const startGuidedReading = useCallback(() => {
-    let wordIndex = 0;
-
     // Clear any existing interval
     if (intervalRef.current) {
       clearTimeout(intervalRef.current);
       intervalRef.current = null;
     }
 
-    const readNextWord = () => {
-      // Check if we should continue reading
-      if (wordIndex >= allWords.length) {
-        setIsPlaying(false);
-        setCurrentWordIndex(-1);
-        intervalRef.current = null;
-        return;
+    // Use natural speech synthesis but highlight words as we go
+    const fullText = text;
+    
+    // Create utterance for natural flow
+    const utterance = new SpeechSynthesisUtterance(fullText);
+    utterance.rate = 0.8;
+    utterance.pitch = 1.0;
+    utterance.volume = 0.8;
+    utterance.lang = 'en-US';
+
+    let currentIndex = 0;
+    
+    // Function to highlight words as speech progresses
+    const highlightWords = () => {
+      if (currentIndex < allWords.length && isPlaying) {
+        setCurrentWordIndex(currentIndex);
+        setCompletedWords(prev => new Set(prev).add(currentIndex));
+        currentIndex++;
+        
+        // Schedule next word highlight based on speech rate
+        const averageWordsPerMinute = 140; // Natural reading speed
+        const msPerWord = (60 / averageWordsPerMinute) * 1000;
+        intervalRef.current = setTimeout(highlightWords, msPerWord);
       }
-
-      // Update current word and speak it
-      setCurrentWordIndex(wordIndex);
-      speak(allWords[wordIndex], {
-        rate: 0.8,
-        pitch: 1.0,
-        volume: 0.8
-      });
-
-      setCompletedWords(prev => new Set(prev).add(wordIndex));
-
-      // Move to next word
-      wordIndex++;
-
-      // Schedule next word with dynamic timing
-      const wordLength = allWords[wordIndex - 1]?.length || 4;
-      const timing = Math.max(1200, wordLength * 180 + 600);
-
-      intervalRef.current = setTimeout(readNextWord, timing);
     };
 
-    // Start reading immediately
-    readNextWord();
-  }, [allWords, speak]);
+    utterance.onstart = () => {
+      setCurrentWordIndex(0);
+      // Start highlighting words
+      highlightWords();
+    };
+
+    utterance.onend = () => {
+      setIsPlaying(false);
+      setCurrentWordIndex(-1);
+      if (intervalRef.current) {
+        clearTimeout(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+
+    utterance.onerror = () => {
+      setIsPlaying(false);
+      setCurrentWordIndex(-1);
+      if (intervalRef.current) {
+        clearTimeout(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+
+    // Start natural speech
+    speechSynthesis.speak(utterance);
+  }, [allWords, text, isPlaying]);
 
 
   const handlePlayPause = useCallback(() => {
