@@ -32,9 +32,9 @@ export function useSpeech(options: UseSpeechOptions = {}) {
 
     // Apply options for more natural American English
     utterance.lang = customOptions?.lang || options.lang || 'en-US';
-    utterance.rate = customOptions?.rate || options.rate || 0.9;
-    utterance.pitch = customOptions?.pitch || options.pitch || 1.1;
-    utterance.volume = customOptions?.volume || options.volume || 0.9;
+    utterance.rate = customOptions?.rate || options.rate || 0.85; // Slower for better comprehension
+    utterance.pitch = customOptions?.pitch || options.pitch || 1.0; // More natural pitch
+    utterance.volume = customOptions?.volume || options.volume || 0.8;
 
     utterance.onstart = () => setIsPlaying(true);
     utterance.onend = () => setIsPlaying(false);

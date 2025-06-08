@@ -86,21 +86,53 @@ export default function ReadingLesson({
     }
   }, [isPlaying, readingMode, text, speak, stopSpeaking]);
 
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
   const startGuidedReading = useCallback(() => {
     let wordIndex = 0;
-    const interval = setInterval(() => {
-      if (wordIndex < words.length) {
+    
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    
+    const readNextWord = () => {
+      if (wordIndex < words.length && isPlaying) {
         setCurrentWordIndex(wordIndex);
-        speak(words[wordIndex]);
+        
+        // Speak word with natural timing
+        speak(words[wordIndex], {
+          rate: 0.9,
+          pitch: 1.0,
+          volume: 0.8
+        });
+        
         setCompletedWords(prev => new Set(prev).add(wordIndex));
         wordIndex++;
+        
+        // Dynamic timing based on word length
+        const wordLength = words[wordIndex - 1]?.length || 4;
+        const timing = Math.max(800, wordLength * 150 + 400);
+        
+        intervalRef.current = setTimeout(readNextWord, timing);
       } else {
         setIsPlaying(false);
         setCurrentWordIndex(-1);
-        clearInterval(interval);
+        intervalRef.current = null;
       }
-    }, 1500);
-  }, [words, speak]);
+    };
+    
+    readNextWord();
+  }, [words, speak, isPlaying]);
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
 
   const handleMicrophoneToggle = useCallback(() => {
     if (isListening) {
@@ -113,7 +145,14 @@ export default function ReadingLesson({
   }, [isListening, startListening, stopListening]);
 
   const resetLesson = useCallback(() => {
+    // Stop all audio and intervals
     stopSpeaking();
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    // Reset all states
     setIsPlaying(false);
     setCurrentWordIndex(-1);
     setReadingProgress(0);
@@ -158,17 +197,17 @@ export default function ReadingLesson({
   }, []);
 
   return (
-    <div className="max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 space-y-6">
+    <div className="max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 space-y-4 sm:space-y-6">
       {/* Progress and Controls */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-1 lg:grid-cols-3 gap-4"
+        className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4"
       >
         {/* Progress Card */}
         <motion.div whileHover={{ scale: 1.02 }} className="lg:col-span-2">
           <Card className="card-glass border-2 border-blue-200">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Target className="w-5 h-5 text-blue-500" />
@@ -189,7 +228,7 @@ export default function ReadingLesson({
         {/* Mode Selection */}
         <motion.div whileHover={{ scale: 1.02 }}>
           <Card className="card-glass border-2 border-purple-200">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-purple-500" />
                 Modo de Leitura
