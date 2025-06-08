@@ -12,7 +12,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import Mascot from "@/components/mascot";
-import tommyLogoPath from "@assets/Tommy logo.png";
+import tommyLogoPath from "@assets/Screenshot_2025-06-04_015828-removebg-preview.png";
 import Header from "@/components/header";
 
 export default function Login() {

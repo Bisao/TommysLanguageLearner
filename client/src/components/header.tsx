@@ -11,7 +11,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import NotificationSystem from "@/components/notification-system";
 import { useNotifications } from "@/hooks/use-notifications";
 import Mascot from "./mascot";
-import tommyLogoPath from "@assets/Tommy logo.png";
+import tommyLogoPath from "@assets/Screenshot_2025-06-04_015828-removebg-preview.png";
 
 interface HeaderProps {
   user?: {

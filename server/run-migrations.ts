@@ -30,8 +30,7 @@ async function runMigrations() {
   }
 }
 
-if (require.main === module) {
-  runMigrations();
-}
+// Run migrations when script is executed directly
+runMigrations();
 
 export { runMigrations };
