@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Flame, Star, Trophy, BookOpen, Home, Target } from "lucide-react";
+import { Flame, Star, Trophy, BookOpen, Home, Target, ArrowLeft, Clock, Sparkles } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from "wouter";
@@ -22,9 +22,12 @@ interface HeaderProps {
   };
   audioControls?: React.ReactNode;
   showAudioControls?: boolean;
+  isReadingPage?: boolean;
+  onGoBack?: () => void;
+  lessonTitle?: string;
 }
 
-export default function Header({ user, audioControls, showAudioControls }: HeaderProps) {
+export default function Header({ user, audioControls, showAudioControls, isReadingPage, onGoBack, lessonTitle }: HeaderProps) {
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -71,21 +74,61 @@ export default function Header({ user, audioControls, showAudioControls }: Heade
     <header className="fixed top-0 left-0 right-0 z-[9999] glass-card border-b border-border/50 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
         <div className="flex justify-between items-center py-2 sm:py-4">
-          {/* Logo Section */}
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center space-x-2 sm:space-x-3 cursor-pointer"
-            onClick={() => setLocation("/home")}
-          >
-            <img 
-              src={tommyLogoPath} 
-              alt="Tommy's Academy Logo" 
-              className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 object-contain"
-            />
-            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold gradient-text hidden sm:block">Tommy's Academy</h1>
-            <h1 className="text-base font-bold gradient-text sm:hidden">Tommy's</h1>
-          </motion.div>
+          {/* Logo Section / Reading Lesson Navigation */}
+          {isReadingPage ? (
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center space-x-3"
+            >
+              <Button 
+                onClick={onGoBack}
+                variant="ghost" 
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-800 hover:bg-white/50 transition-all duration-200"
+              >
+                <ArrowLeft size={16} />
+                Voltar
+              </Button>
+              
+              <div className="flex-1 text-center">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.2 }}
+                  className="space-y-2"
+                >
+                  <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    {lessonTitle || "Lição de Leitura"}
+                  </h1>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <Badge className="bg-blue-100 text-blue-700 border border-blue-200">
+                      <Clock className="w-3 h-3 mr-1" />
+                      15-20 min
+                    </Badge>
+                    <Badge className="bg-purple-100 text-purple-700 border border-purple-200">
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      Nível Intermediário
+                    </Badge>
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center space-x-2 sm:space-x-3 cursor-pointer"
+              onClick={() => setLocation("/home")}
+            >
+              <img 
+                src={tommyLogoPath} 
+                alt="Tommy's Academy Logo" 
+                className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 object-contain"
+              />
+              <h1 className="text-lg sm:text-xl lg:text-2xl font-bold gradient-text hidden sm:block">Tommy's Academy</h1>
+              <h1 className="text-base font-bold gradient-text sm:hidden">Tommy's</h1>
+            </motion.div>
+          )}
 
           {/* Audio Controls for Reading Lesson */}
           {showAudioControls && audioControls && (

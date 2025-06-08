@@ -142,58 +142,20 @@ These trends suggest that the future of food will be more diverse, more sustaina
         user={user} 
         audioControls={audioControls}
         showAudioControls={true}
+        isReadingPage={true}
+        onGoBack={goBack}
+        lessonTitle={currentLessonData.title}
       />
       
       <main className="pt-20 sm:pt-24">
-        {/* Hero Section */}
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-8 mb-6"
-        >
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-            <Button 
-              onClick={goBack}
-              variant="ghost" 
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 hover:bg-white/50 transition-all duration-200"
-            >
-              <ArrowLeft size={16} />
-              Voltar
-            </Button>
-            
-            <div className="flex-1 text-center">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2 }}
-                className="space-y-2"
-              >
-                <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Lição de Leitura
-                </h1>
-                <div className="flex flex-wrap justify-center gap-2">
-                  <Badge className="bg-blue-100 text-blue-700 border border-blue-200">
-                    <Clock className="w-3 h-3 mr-1" />
-                    15-20 min
-                  </Badge>
-                  <Badge className="bg-purple-100 text-purple-700 border border-purple-200">
-                    <Sparkles className="w-3 h-3 mr-1" />
-                    Nível Intermediário
-                  </Badge>
-                </div>
-              </motion.div>
-            </div>
-            
-            <div className="w-20 sm:w-auto"></div>
-          </div>
-        </motion.div>
+        
 
         {/* Lesson Content with Enhanced Animation */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
+          className="px-3 sm:px-4 lg:px-8"
         >
           <ReadingLesson
             title={currentLessonData.title}
