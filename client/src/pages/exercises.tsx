@@ -117,7 +117,6 @@ export default function Exercises() {
               <Button 
                 className="w-full cartoon-button bg-cartoon-mint hover:bg-cartoon-mint/80"
                 disabled={dailyProgress >= 100}
-                onClick={() => window.location.href = "/lessons"}
               >
                 {dailyProgress >= 100 ? "Desafio Concluído!" : "Começar Desafio"}
               </Button>
@@ -163,12 +162,6 @@ export default function Exercises() {
                     <Button
                       className={`w-full cartoon-button bg-${exercise.color} hover:bg-${exercise.color}/80`}
                       disabled={!exercise.available}
-                      onClick={() => {
-                        if (exercise.available) {
-                          if (exercise.id === 1) window.location.href = "/lessons";
-                          if (exercise.id === 2) window.location.href = "/lessons";
-                        }
-                      }}
                     >
                       {exercise.available ? "Começar" : "Em Breve"}
                     </Button>

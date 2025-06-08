@@ -87,7 +87,7 @@ export default function Home() {
   const dailyProgress = dailyStats ? ((dailyStats as any).lessonsCompleted / ((user as any)?.dailyGoal || 4)) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-background pt-20 sm:pt-24 lg:pt-28">
+    <div className="min-h-screen bg-background">
       <Header user={user as any} />
 
       {/* Spacing between header and content */}
@@ -109,11 +109,11 @@ export default function Home() {
           </h2>
           <p className="text-base sm:text-lg lg:text-xl text-muted-foreground px-4 mb-6">Continue sua jornada de aprendizado com lições divertidas!</p>
 
-          
+
         </motion.div>
 
         {/* Quick Stats Dashboard */}
-        
+
 
         {/* Main Navigation Cards */}
         <motion.div 

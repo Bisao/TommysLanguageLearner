@@ -33,7 +33,7 @@ export default function Phrases() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-teal-50 pt-16 sm:pt-20">
+    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-teal-50">
       <Header user={user} />
       
       <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">

@@ -1,8 +1,7 @@
-
 import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
-import { Star, Zap, Trophy } from "lucide-react";
+import { Star, Zap } from "lucide-react";
 
 interface LevelProgressProps {
   level: number;
@@ -11,155 +10,85 @@ interface LevelProgressProps {
   totalXP: number;
 }
 
-// Função para calcular XP necessário baseado no nível
-function calculateXPForLevel(level: number): number {
-  return Math.floor(1000 * Math.pow(1.2, level - 1));
-}
-
 export default function LevelProgress({
   level,
   currentXP,
-  xpForNextLevel,
+  xpForNextLevel = 1000,
   totalXP,
 }: LevelProgressProps) {
-  const xpRequired = xpForNextLevel || calculateXPForLevel(level + 1);
-  const progressPercent = Math.min((currentXP / xpRequired) * 100, 100);
-  const xpToNext = Math.max(xpRequired - currentXP, 0);
+  const progressPercent = (currentXP / xpForNextLevel) * 100;
+  const xpToNext = xpForNextLevel - currentXP;
 
   return (
-    <Card className="cartoon-card overflow-hidden border-2 hover:shadow-lg transition-all duration-300">
+    <Card className="cartoon-card overflow-hidden">
       <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
             <motion.div
-              className="w-20 h-20 bg-gradient-to-br from-purple-500 via-blue-600 to-indigo-600 rounded-full flex items-center justify-center shadow-lg"
+              className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-full flex items-center justify-center"
               whileHover={{ scale: 1.1, rotate: 10 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              transition={{ type: "spring", stiffness: 300 }}
             >
-              <Star className="text-white" size={32} />
+              <Star className="text-white" size={28} />
             </motion.div>
             <div>
-              <motion.h3 
-                className="text-3xl font-bold text-cartoon-dark"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                Nível {level}
-              </motion.h3>
-              <p className="text-sm text-gray-600 font-medium">
+              <h3 className="text-2xl font-bold text-foreground">Nível {level}</h3>
+              <p className="text-sm text-muted-foreground">
                 {totalXP.toLocaleString()} XP Total
               </p>
             </div>
           </div>
           
           <motion.div
-            className="text-right bg-gradient-to-br from-yellow-100 to-orange-100 p-3 rounded-lg"
+            className="text-right"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
           >
-            <div className="flex items-center space-x-2 text-orange-600">
-              <Zap size={20} />
-              <span className="text-xl font-bold">{currentXP}</span>
+            <div className="flex items-center space-x-1 text-primary">
+              <Zap size={16} />
+              <span className="text-lg font-bold">{currentXP}</span>
             </div>
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-muted-foreground">
               {xpToNext} para próximo nível
             </p>
           </motion.div>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-sm font-semibold text-cartoon-dark">
+            <span className="text-sm font-medium text-foreground">
               Progresso para Nível {level + 1}
             </span>
-            <span className="text-sm font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded-full">
+            <span className="text-sm text-muted-foreground">
               {Math.round(progressPercent)}%
             </span>
           </div>
           
           <div className="relative">
-            <Progress value={progressPercent} className="h-4 bg-gray-200" />
+            <Progress value={progressPercent} className="h-3" />
             <motion.div
-              className="absolute top-0 left-0 h-4 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 rounded-full overflow-hidden"
-              style={{ 
-                background: `linear-gradient(90deg, 
-                  #fbbf24 0%, 
-                  #f97316 ${progressPercent/2}%, 
-                  #dc2626 100%)`
-              }}
+              className="absolute top-0 left-0 h-3 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full"
               initial={{ width: 0 }}
               animate={{ width: `${progressPercent}%` }}
-              transition={{ duration: 1.5, ease: "easeOut" }}
-            >
-              <motion.div
-                className="h-full bg-gradient-to-r from-white/30 to-transparent"
-                animate={{ x: ['-100%', '100%'] }}
-                transition={{ 
-                  duration: 2, 
-                  repeat: Infinity, 
-                  ease: "linear",
-                  delay: 1.5 
-                }}
-              />
-            </motion.div>
+              transition={{ duration: 1, ease: "easeOut" }}
+            />
           </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-3 gap-4">
-          <motion.div 
-            className="text-center bg-blue-50 p-3 rounded-lg"
-            whileHover={{ scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 400 }}
-          >
-            <div className="flex items-center justify-center mb-1">
-              <Zap size={16} className="text-blue-600 mr-1" />
-              <p className="text-lg font-bold text-blue-600">{currentXP}</p>
-            </div>
-            <p className="text-xs text-gray-600 font-medium">XP Atual</p>
-          </motion.div>
-          
-          <motion.div 
-            className="text-center bg-green-50 p-3 rounded-lg"
-            whileHover={{ scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 400 }}
-          >
-            <div className="flex items-center justify-center mb-1">
-              <Trophy size={16} className="text-green-600 mr-1" />
-              <p className="text-lg font-bold text-green-600">{xpRequired}</p>
-            </div>
-            <p className="text-xs text-gray-600 font-medium">Para Próximo</p>
-          </motion.div>
-          
-          <motion.div 
-            className="text-center bg-purple-50 p-3 rounded-lg"
-            whileHover={{ scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 400 }}
-          >
-            <div className="flex items-center justify-center mb-1">
-              <Star size={16} className="text-purple-600 mr-1" />
-              <p className="text-lg font-bold text-purple-600">{level + 1}</p>
-            </div>
-            <p className="text-xs text-gray-600 font-medium">Próximo Nível</p>
-          </motion.div>
+        <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+          <div className="space-y-1">
+            <p className="text-lg font-bold text-foreground">{currentXP}</p>
+            <p className="text-xs text-muted-foreground">XP Atual</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-lg font-bold text-foreground">{xpForNextLevel}</p>
+            <p className="text-xs text-muted-foreground">Para Próximo</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-lg font-bold text-foreground">{level + 1}</p>
+            <p className="text-xs text-muted-foreground">Próximo Nível</p>
+          </div>
         </div>
-
-        {/* Barra de conquistas */}
-        {level > 1 && (
-          <motion.div 
-            className="mt-4 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-          >
-            <div className="flex items-center space-x-2">
-              <Trophy size={16} className="text-yellow-600" />
-              <span className="text-sm font-medium text-yellow-800">
-                Parabéns! Você está no nível {level}!
-              </span>
-            </div>
-          </motion.div>
-        )}
       </CardContent>
     </Card>
   );

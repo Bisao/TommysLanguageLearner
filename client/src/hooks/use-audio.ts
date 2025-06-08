@@ -36,44 +36,32 @@ export function useAudio() {
       speaking: speechSynthesis.speaking,
       paused: speechSynthesis.paused,
       isPlaying,
-      isPaused,
-      fromPosition
+      isPaused
     });
 
     // Limpar qualquer timer anterior
     cleanup();
 
     // Stop any currently playing speech and wait for it to complete
-    if (speechSynthesis.speaking || speechSynthesis.paused) {
-      console.log("Canceling existing speech synthesis");
+    if (speechSynthesis.speaking) {
       speechSynthesis.cancel();
       
       // Aguardar até que o speechSynthesis pare completamente
       let attempts = 0;
-      const maxAttempts = 50; // máximo 5 segundos
-      while ((speechSynthesis.speaking || speechSynthesis.paused) && attempts < maxAttempts) {
+      const maxAttempts = 30; // máximo 3 segundos
+      while (speechSynthesis.speaking && attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
       }
       
       // Aguardar um pouco mais para garantir que está totalmente limpo
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       console.log("After cancel - speechSynthesis state:", {
         speaking: speechSynthesis.speaking,
         paused: speechSynthesis.paused,
         attempts
       });
-      
-      // Se ainda estiver falando após tantas tentativas, forçar um reset
-      if (speechSynthesis.speaking || speechSynthesis.paused) {
-        console.warn("Force resetting speech synthesis");
-        // Tentar múltiplos cancels
-        for (let i = 0; i < 3; i++) {
-          speechSynthesis.cancel();
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      }
     }
 
     // Split text into words to track position
@@ -237,32 +225,20 @@ export function useAudio() {
         // Tratamento específico para diferentes tipos de erro
         if (event.error === 'interrupted') {
           console.log("Speech interrupted (expected during pause/resume)");
-          // Não limpar o estado se for uma interrupção esperada
+          // NÃO limpar estados durante interrupções esperadas
           return;
         } else if (event.error === 'canceled') {
-          console.log("Speech canceled - cleaning up state");
+          console.log("Speech canceled");
           cleanup();
           setIsPlaying(false);
           setIsPaused(false);
           setCurrentUtterance(null);
-          setCurrentText("");
-          setRemainingText("");
-        } else if (event.error === 'synthesis-failed' || event.error === 'synthesis-unavailable') {
-          console.error("Speech synthesis failed:", event.error);
-          cleanup();
-          setIsPlaying(false);
-          setIsPaused(false);
-          setCurrentUtterance(null);
-          setCurrentText("");
-          setRemainingText("");
         } else {
           console.error("Unexpected speech error:", event.error);
           cleanup();
           setIsPlaying(false);
           setIsPaused(false);
           setCurrentUtterance(null);
-          setCurrentText("");
-          setRemainingText("");
         }
       };
     } else {
@@ -358,38 +334,64 @@ export function useAudio() {
   }, []);
 
   const resumeAudio = useCallback(() => {
-    console.log("resumeAudio called - speechSynthesis.paused:", speechSynthesis.paused, "speechSynthesis.speaking:", speechSynthesis.speaking);
-    console.log("currentUtterance exists:", !!currentUtterance, "isPaused:", isPaused);
+    console.log("resumeAudio called - speechSynthesis state:", {
+      paused: speechSynthesis.paused,
+      speaking: speechSynthesis.speaking,
+      pending: speechSynthesis.pending
+    });
+    console.log("Hook state:", { currentUtterance: !!currentUtterance, isPaused, isPlaying });
     
     if (currentUtterance && isPaused) {
       try {
-        if (speechSynthesis.paused && speechSynthesis.speaking) {
-          console.log("Resuming paused speech synthesis...");
-          speechSynthesis.resume();
-          setIsPaused(false);
-          setIsPlaying(true);
-          console.log("Speech synthesis resumed successfully");
-        } else if (!speechSynthesis.speaking) {
-          console.log("Speech was canceled, cannot resume with current method");
-          throw new Error("Speech was canceled, needs restart");
+        // Primeiro verificar se realmente está pausado
+        if (speechSynthesis.speaking) {
+          // Se está falando, verificar se está pausado
+          if (speechSynthesis.paused) {
+            console.log("Speech is properly paused, resuming...");
+            speechSynthesis.resume();
+            
+            // Verificar se realmente retomou
+            setTimeout(() => {
+              if (speechSynthesis.speaking && !speechSynthesis.paused) {
+                setIsPaused(false);
+                setIsPlaying(true);
+                console.log("Speech synthesis resumed successfully");
+              } else {
+                console.warn("Resume failed - speech still paused or stopped");
+              }
+            }, 100);
+            
+            return true;
+          } else {
+            // Se está falando mas não pausado, pode ser um problema de sincronização
+            console.log("Speech appears to be running but hook thinks it's paused - syncing states");
+            setIsPaused(false);
+            setIsPlaying(true);
+            return true;
+          }
         } else {
-          console.log("Speech synthesis already running");
+          // Se não está falando, não pode retomar
+          console.log("Speech was completely stopped, cannot resume");
           setIsPaused(false);
-          setIsPlaying(true);
+          setIsPlaying(false);
+          setCurrentUtterance(null);
+          return false;
         }
       } catch (error) {
-        console.warn("Error resuming speech synthesis:", error);
-        speechSynthesis.cancel();
+        console.error("Error in resumeAudio:", error);
         setIsPaused(false);
         setIsPlaying(false);
-        setCurrentUtterance(null);
-        throw error;
+        return false;
       }
     } else {
-      console.warn("Cannot resume - no valid paused utterance. currentUtterance:", !!currentUtterance, "isPaused:", isPaused);
-      throw new Error("No valid paused utterance to resume");
+      console.warn("Cannot resume - invalid state:", {
+        hasUtterance: !!currentUtterance,
+        isPaused,
+        isPlaying
+      });
+      return false;
     }
-  }, [currentUtterance, isPaused]);
+  }, [currentUtterance, isPaused, isPlaying]);
 
   const stopAudio = useCallback(() => {
     console.log("stopAudio called");

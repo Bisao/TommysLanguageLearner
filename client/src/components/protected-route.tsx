@@ -1,16 +1,6 @@
-
-import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
-
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  totalXP?: number;
-  level?: number;
-  streak?: number;
-}
+import { User } from "@shared/schema";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

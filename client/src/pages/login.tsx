@@ -257,14 +257,19 @@ export default function Login() {
         className="w-full max-w-md mx-auto"
       >
         {/* Header */}
-        <div className="text-center mb-4">
+        <div className="text-center mb-6 sm:mb-8">
           <div className="flex flex-col items-center justify-center space-y-4 mb-4">
             <img 
               src={tommyLogoPath} 
               alt="Tommy's Academy Logo" 
-              className="w-40 h-40 sm:w-48 sm:h-48 lg:w-56 lg:h-56 object-contain"
+              className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 object-contain"
             />
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-cartoon-dark text-center">Tommy's Academy</h1>
           </div>
+
+          <p className="text-sm sm:text-base text-gray-600 px-2">
+            {isLogin ? "Entre na sua conta" : "Crie sua conta"} e continue sua jornada de aprendizado!
+          </p>
         </div>
 
         {/* Login/Register Card */}

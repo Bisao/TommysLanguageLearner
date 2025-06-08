@@ -58,36 +58,64 @@ export default function ReadingLesson({ title, text, onComplete, onControlsReady
 
   const { toast } = useToast();
 
-  // Initialize word feedback array
+  // Initialize word feedback array with validation
   useEffect(() => {
-    const titleWords = title.split(/\s+/).filter(word => word.length > 0);
-    const textWords = text.split(/\s+/).filter(word => word.length > 0);
-    const allWords = [...titleWords, ...textWords];
-    const initialFeedback = allWords.map(word => ({
-      word: word.replace(/[.,!?;:]/g, ''),
-      status: 'unread' as const
-    }));
-    setWordFeedback(initialFeedback);
+    if (!title || !text) {
+      console.warn("ReadingLesson: Missing title or text content");
+      return;
+    }
+
+    try {
+      const titleWords = title.split(/\s+/).filter(word => word.trim().length > 0);
+      const textWords = text.split(/\s+/).filter(word => word.trim().length > 0);
+      
+      if (titleWords.length === 0 && textWords.length === 0) {
+        console.warn("ReadingLesson: No valid words found in content");
+        return;
+      }
+
+      const allWords = [...titleWords, ...textWords];
+      const initialFeedback = allWords.map(word => ({
+        word: word.replace(/[.,!?;:"'()[\]]/g, '').trim(),
+        status: 'unread' as const
+      })).filter(feedback => feedback.word.length > 0);
+      
+      setWordFeedback(initialFeedback);
+      console.log(`ReadingLesson initialized with ${allWords.length} words`);
+    } catch (error) {
+      console.error("Error initializing word feedback:", error);
+      setWordFeedback([]);
+    }
   }, [title, text]);
 
   const startAutoReading = useCallback(() => {
+    // Validar conteúdo antes de iniciar
+    if (!title?.trim() || !text?.trim()) {
+      console.error("Cannot start auto reading: missing title or text content");
+      toast({
+        title: "❌ Erro no conteúdo",
+        description: "Não foi possível carregar o conteúdo da lição.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Verificar se já está lendo para evitar múltiplas instâncias
     if (isAutoReading || isPlaying) {
       console.log("Already in auto reading mode or playing, skipping");
       return;
     }
 
-    // Parar qualquer áudio que esteja tocando
+    // Parar qualquer áudio que possa estar rodando
     if (speechSynthesis.speaking) {
       stopAudio();
-      // Aguardar um pouco para garantir que parou completamente
+      // Pequeno delay para garantir que parou completamente
       setTimeout(() => {
         startAutoReading();
-      }, 300);
+      }, 150);
       return;
     }
 
-    console.log("Starting auto reading - clean state");
     setIsAutoReading(true);
     setIsPaused(false);
     setCurrentWordIndex(-1); // Iniciar sem destaque
@@ -103,8 +131,8 @@ export default function ReadingLesson({ title, text, onComplete, onControlsReady
       return;
     }
 
-    // Função para scroll automático - definir fora do callback para reutilização
-    const scrollToWord = useCallback((wordIndex: number, isTitle: boolean) => {
+    // Função para scroll automático
+    const scrollToWord = (wordIndex: number, isTitle: boolean) => {
       requestAnimationFrame(() => {
         const selector = isTitle ? `[data-word-index="title-${wordIndex}"]` : `[data-word-index="text-${wordIndex}"]`;
         const wordElement = document.querySelector(selector);
@@ -123,7 +151,7 @@ export default function ReadingLesson({ title, text, onComplete, onControlsReady
           });
         }
       });
-    }, []);
+    };
 
     // Função sincronizada para word boundaries - VOZ E HIGHLIGHT JUNTOS
     const handleWordBoundary = (word: string, wordIndex: number) => {
@@ -195,14 +223,16 @@ export default function ReadingLesson({ title, text, onComplete, onControlsReady
   const pauseAutoReading = useCallback(() => {
     console.log("Pausing auto reading - maintaining word sync");
     
-    // Pausar imediatamente tanto o áudio quanto manter o highlight
-    setIsPaused(true);
+    // Pausar o áudio primeiro
     if (isPlaying) {
       pauseAudio();
     }
     
-    // Manter o highlight na palavra atual durante a pausa
-    console.log(`Paused at word index: ${currentWordIndex}`);
+    // Aguardar um momento para o áudio pausar antes de atualizar o estado
+    setTimeout(() => {
+      setIsPaused(true);
+      console.log(`Paused at word index: ${currentWordIndex}`);
+    }, 100);
     
     toast({
       title: "⏸️ Professor Tommy pausado",
@@ -212,85 +242,67 @@ export default function ReadingLesson({ title, text, onComplete, onControlsReady
 
   const resumeAutoReading = useCallback(() => {
     if (!isAutoReading) {
-      console.log("Not in auto reading mode, starting fresh");
-      startAutoReading();
+      console.log("Not in auto reading mode, cannot resume");
       return;
     }
 
     console.log("Resuming auto reading from word:", currentWordIndex);
 
-    // Verificar se o áudio está realmente pausado e pode ser retomado
-    if (isPaused && speechSynthesis.paused && speechSynthesis.speaking && currentUtterance) {
-      try {
-        resumeAudio();
-        setIsPaused(false);
-        console.log("Successfully resumed paused speech");
-        
-        toast({
-          title: "▶️ Professor Tommy retomando",
-          description: "Voz e destaque continuando juntos",
-        });
-        return;
-      } catch (error) {
-        console.warn("Failed to resume paused audio:", error);
-      }
-    }
-
-    // Se não conseguiu retomar, tentar continuar de onde parou
-    if (currentWordIndex > 0) {
-      console.log(`Resuming from word: ${currentWordIndex}`);
-      const titleWords = title.split(/\s+/).filter(word => word.length > 0);
-      const textWords = text.split(/\s+/).filter(word => word.length > 0);
-      const allWords = [...titleWords, ...textWords];
+    // Tentar retomar áudio pausado
+    if (isPaused && currentUtterance) {
+      const resumeSuccess = resumeAudio();
       
-      if (currentWordIndex < allWords.length) {
-        const remainingWords = allWords.slice(currentWordIndex);
-        const remainingText = remainingWords.join(' ');
-        
+      if (resumeSuccess) {
+        // Sincronizar estado local imediatamente
         setIsPaused(false);
+        console.log("Resume initiated, syncing local state");
         
-        const handleWordBoundary = (word: string, wordIndex: number) => {
-          const globalIndex = currentWordIndex + wordIndex;
-          console.log(`Resume boundary: word "${word}" at global index ${globalIndex}`);
-          setCurrentWordIndex(globalIndex);
-          
-          // Auto-scroll
-          const totalTitleWords = titleWords.length;
-          if (globalIndex < totalTitleWords) {
-            scrollToWord(globalIndex, true);
+        // Verificar se realmente retomou após um delay
+        setTimeout(() => {
+          if (isPlaying && !isAudioPaused) {
+            console.log("Resume confirmed - speech is playing");
+            toast({
+              title: "▶️ Professor Tommy retomando",
+              description: "Voz e destaque continuando juntos",
+            });
           } else {
-            const textWordIndex = globalIndex - totalTitleWords;
-            scrollToWord(textWordIndex, false);
+            console.warn("Resume may have failed - checking speech state");
+            // Se não conseguir retomar, oferece reiniciar
+            toast({
+              title: "⚠️ Problema na retomada",
+              description: "Clique em play para reiniciar a leitura",
+              variant: "destructive"
+            });
+            setIsAutoReading(false);
+            setIsPaused(false);
+            setCurrentWordIndex(-1);
           }
-        };
+        }, 300);
         
-        playText(remainingText, "en-US", 0, handleWordBoundary);
-        
+        return;
+      } else {
+        console.log("Resume explicitly failed");
         toast({
-          title: "▶️ Professor Tommy continuando",
-          description: `Retomando da palavra ${currentWordIndex + 1}`,
+          title: "❌ Falha na retomada",
+          description: "Use o botão play para reiniciar",
+          variant: "destructive"
         });
+        
+        // Limpar estados
+        setIsAutoReading(false);
+        setIsPaused(false);
+        setCurrentWordIndex(-1);
+        stopAudio();
         return;
       }
     }
 
-    // Último recurso: reiniciar do início
-    console.log("Restarting from beginning due to resume failure");
-    setIsAutoReading(false); // Reset state primeiro
-    setIsPaused(false);
-    setCurrentWordIndex(-1);
-    stopAudio();
-    
-    // Pequeno delay para garantir que o estado foi resetado
-    setTimeout(() => {
-      startAutoReading();
-    }, 500);
-    
+    console.log("No valid paused state to resume from");
     toast({
-      title: "🔄 Reiniciando leitura",
-      description: "Recomeçando do início",
+      title: "ℹ️ Nenhuma leitura pausada",
+      description: "Use o botão play para iniciar a leitura",
     });
-  }, [isAutoReading, isPaused, currentWordIndex, currentUtterance, resumeAudio, toast, stopAudio, startAutoReading, title, text, playText]);
+  }, [isAutoReading, isPaused, currentUtterance, resumeAudio, toast, stopAudio, currentWordIndex, isPlaying, isAudioPaused]);
 
   const stopAutoReading = useCallback(() => {
     console.log("Stopping auto reading - full reset");

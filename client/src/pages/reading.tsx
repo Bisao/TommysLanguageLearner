@@ -12,10 +12,30 @@ export default function Reading() {
   const [, setLocation] = useLocation();
   const [lessonCompleted, setLessonCompleted] = useState(false);
   const [audioControls, setAudioControls] = useState<React.ReactNode>(null);
+  const [currentLessonData, setCurrentLessonData] = useState({
+    title: "How Will We Eat in 2021?",
+    text: `The pandemic has changed how we think about food. Many people are cooking more at home. Restaurants have had to adapt quickly. Food delivery services have become more popular than ever.
+
+Some experts believe that these changes will continue even after the pandemic ends. Home cooking might remain more common. People might keep ordering food for delivery. Restaurants might focus more on takeout and delivery.
+
+Technology is also changing how we eat. Smart kitchens are becoming more popular. Apps help people plan meals and order groceries. Virtual cooking classes teach people new skills.
+
+The environment is another important factor. More people want to eat sustainable food. Plant-based meat alternatives are growing in popularity. Reducing food waste has become a priority for many families.
+
+Local food systems are also getting more attention. Community gardens are expanding. Farmers markets are adapting to new safety requirements. People want to know where their food comes from.
+
+These trends suggest that the future of food will be more diverse, more sustainable, and more connected to technology than ever before.`
+  });
 
   const { data: user } = useQuery({
     queryKey: ["/api/user"],
   });
+
+  // Future: Load lesson data dynamically based on URL params or lesson ID
+  // const { data: lessonData } = useQuery({
+  //   queryKey: ["/api/lessons", lessonId],
+  //   enabled: !!lessonId
+  // });
 
   const handleLessonComplete = () => {
     setLessonCompleted(true);
@@ -102,8 +122,8 @@ When school finished, my mom was waiting for me at the gate. I told her all abou
         </div>
 
         <ReadingLesson
-          title={lessonTitle}
-          text={lessonText}
+          title={currentLessonData.title}
+          text={currentLessonData.text}
           onComplete={handleLessonComplete}
           onControlsReady={handleControlsReady}
         />

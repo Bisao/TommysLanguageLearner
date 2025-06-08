@@ -76,11 +76,29 @@
     @apply border-border;
   }
 
+  html {
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     background: var(--gradient-surface);
     min-height: 100vh;
     transition: background-color 0.3s ease, color 0.3s ease;
+    padding-top: 80px; /* Espaço para o header fixo */
+    overflow-x: hidden;
+  }
+
+  @media (min-width: 640px) {
+    body {
+      padding-top: 96px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    body {
+      padding-top: 112px;
+    }
   }
 
   /* Ensure scrollbars don't overlap the header */
@@ -208,22 +226,7 @@
   }
 }
 
-/* Header spacing utilities */
-.content-with-header {
-  padding-top: 5rem; /* 80px */
-}
-
-@media (min-width: 640px) {
-  .content-with-header {
-    padding-top: 6rem; /* 96px */
-  }
-}
-
-@media (min-width: 1024px) {
-  .content-with-header {
-    padding-top: 7rem; /* 112px */
-  }
-}
+/* Header spacing utilities - não mais necessárias pois o padding está no body */
 
 /* Custom utility classes for cartoon theme */
 .text-cartoon-red { color: hsl(var(--cartoon-red)); }
@@ -319,4 +322,9 @@
   .profile-stat-card:active {
     transform: translateY(1px);
   }
+}
+
+html,
+:host {
+  text-size-adjust: 100%;
 }
