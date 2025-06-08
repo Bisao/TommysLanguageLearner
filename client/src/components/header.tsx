@@ -79,7 +79,7 @@ export default function Header({ user, audioControls, showAudioControls, isReadi
             <motion.div 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-3"
+              className="flex items-center w-full"
             >
               <Button 
                 onClick={onGoBack}
@@ -90,7 +90,7 @@ export default function Header({ user, audioControls, showAudioControls, isReadi
                 Voltar
               </Button>
               
-              <div className="flex-1 text-center">
+              <div className="flex-1 text-center mx-4">
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -98,9 +98,13 @@ export default function Header({ user, audioControls, showAudioControls, isReadi
                   className="space-y-2"
                 >
                   <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    {lessonTitle || "Lição de Leitura"}
+                    Lição de Leitura
                   </h1>
                   <div className="flex flex-wrap justify-center gap-2">
+                    <Badge className="bg-green-100 text-green-700 border border-green-200">
+                      <BookOpen className="w-3 h-3 mr-1" />
+                      {lessonTitle || "How Will We Eat in 2021?"}
+                    </Badge>
                     <Badge className="bg-blue-100 text-blue-700 border border-blue-200">
                       <Clock className="w-3 h-3 mr-1" />
                       15-20 min
