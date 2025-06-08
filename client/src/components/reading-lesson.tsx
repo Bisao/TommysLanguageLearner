@@ -72,9 +72,11 @@ export default function ReadingLesson({
   const startGuidedReading = useCallback(() => {
     // Use the useAudio hook with perfect word boundary synchronization
     playText(text, 'en-US', 0, (word: string, wordIndex: number) => {
-      // Highlight the current word being spoken
-      setCurrentWordIndex(wordIndex);
-      setCompletedWords(prev => new Set(prev).add(wordIndex));
+      // Only highlight if speech is actually playing (not paused)
+      if (speechSynthesis.speaking && !speechSynthesis.paused) {
+        setCurrentWordIndex(wordIndex);
+        setCompletedWords(prev => new Set(prev).add(wordIndex));
+      }
     });
   }, [text, playText]);
 
@@ -88,6 +90,8 @@ export default function ReadingLesson({
       } else {
         pauseAudio();
         setIsPlaying(false);
+        // Clear current word highlighting when paused
+        setCurrentWordIndex(-1);
       }
     } else {
       setIsPlaying(true);
@@ -143,6 +147,18 @@ export default function ReadingLesson({
   useEffect(() => {
     setIsPlaying(audioIsPlaying);
   }, [audioIsPlaying]);
+
+  // Monitor speech synthesis pause state and clear highlighting when paused
+  useEffect(() => {
+    const checkPauseState = () => {
+      if (speechSynthesis.paused && speechSynthesis.speaking) {
+        setCurrentWordIndex(-1); // Clear highlighting when paused
+      }
+    };
+
+    const interval = setInterval(checkPauseState, 100);
+    return () => clearInterval(interval);
+  }, []);
 
   // Separate effect for completion check to avoid dependency loop
   useEffect(() => {
