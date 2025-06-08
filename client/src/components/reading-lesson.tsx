@@ -21,7 +21,7 @@ import {
   Sparkles,
   ChevronRight
 } from "lucide-react";
-import { useSpeech } from "@/hooks/use-speech";
+import { useAudio } from "@/hooks/use-audio";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 
 interface ReadingLessonProps {
@@ -46,13 +46,15 @@ export default function ReadingLesson({
   const [showTranslation, setShowTranslation] = useState(false);
 
   const textRef = useRef<HTMLDivElement>(null);
-  const { speak, stop: stopSpeaking, isSupported } = useSpeech();
+  const { playText, pauseAudio, resumeAudio, stopAudio, isPlaying: audioIsPlaying, isPaused } = useAudio();
   const { 
     startListening, 
     stopListening, 
     transcript, 
     isSupported: speechRecognitionSupported 
   } = useSpeechRecognition();
+
+  const isSupported = 'speechSynthesis' in window;
 
   // Split text into paragraphs and then words, preserving structure
   const paragraphs = text.split('\n\n').filter(p => p.trim().length > 0);
@@ -61,52 +63,43 @@ export default function ReadingLesson({
 
   const handleWordClick = useCallback((word: string, index: number) => {
     if (isSupported) {
-      speak(word);
+      playText(word);
       setCurrentWordIndex(index);
       setCompletedWords(prev => new Set(prev).add(index));
     }
-  }, [speak, isSupported]);
+  }, [playText, isSupported]);
 
   const startGuidedReading = useCallback(() => {
-    // Use the useSpeech hook with word boundary callback for perfect sync
-    speak(text, {
-      rate: 0.8,
-      pitch: 1.0,
-      volume: 0.8,
-      onWordBoundary: (word: string, wordIndex: number) => {
-        // Highlight the current word being spoken
-        setCurrentWordIndex(wordIndex);
-        setCompletedWords(prev => new Set(prev).add(wordIndex));
-      }
+    // Use the useAudio hook with perfect word boundary synchronization
+    playText(text, 'en-US', 0, (word: string, wordIndex: number) => {
+      // Highlight the current word being spoken
+      setCurrentWordIndex(wordIndex);
+      setCompletedWords(prev => new Set(prev).add(wordIndex));
     });
-  }, [text, speak]);
+  }, [text, playText]);
 
 
   const handlePlayPause = useCallback(() => {
     if (isPlaying) {
-      // Stop current playback
-      stopSpeaking();
-      if (intervalRef.current) {
-        clearTimeout(intervalRef.current);
-        intervalRef.current = null;
+      // Pause current playback
+      if (isPaused) {
+        resumeAudio();
+        setIsPlaying(true);
+      } else {
+        pauseAudio();
+        setIsPlaying(false);
       }
-      setIsPlaying(false);
-      setCurrentWordIndex(-1);
     } else {
       setIsPlaying(true);
       setCurrentWordIndex(0);
       if (readingMode === 'guided') {
         startGuidedReading();
       } else {
-        // Natural reading of full text with improved settings
-        speak(text, {
-          rate: 0.85, // Natural speaking pace
-          pitch: 1.0,
-          volume: 0.8
-        });
+        // Natural reading of full text
+        playText(text);
       }
     }
-  }, [isPlaying, readingMode, text, speak, stopSpeaking, startGuidedReading]);
+  }, [isPlaying, isPaused, readingMode, text, playText, pauseAudio, resumeAudio, startGuidedReading]);
 
   
 
@@ -122,7 +115,7 @@ export default function ReadingLesson({
 
   const resetLesson = useCallback(() => {
     // Stop all audio
-    stopSpeaking();
+    stopAudio();
 
     // Reset all states
     setIsPlaying(false);
@@ -131,7 +124,7 @@ export default function ReadingLesson({
     setCompletedWords(new Set());
     setIsListening(false);
     stopListening();
-  }, [stopSpeaking, stopListening]);
+  }, [stopAudio, stopListening]);
 
   const completeLesson = useCallback(() => {
     setReadingProgress(100);
@@ -145,6 +138,11 @@ export default function ReadingLesson({
     const progress = (completedWords.size / totalWords) * 100;
     setReadingProgress(progress);
   }, [completedWords, totalWords]);
+
+  // Sync isPlaying state with audio hook
+  useEffect(() => {
+    setIsPlaying(audioIsPlaying);
+  }, [audioIsPlaying]);
 
   // Separate effect for completion check to avoid dependency loop
   useEffect(() => {
@@ -190,10 +188,10 @@ export default function ReadingLesson({
   ), [isPlaying, isSupported, handlePlayPause, resetLesson]);
 
   useEffect(() => {
-    if (onControlsReady && audioControls) {
+    if (onControlsReady) {
       onControlsReady(audioControls);
     }
-  }, [onControlsReady]);
+  }, [onControlsReady, isPlaying, isSupported]);
 
   return (
     <div className="max-w-5xl mx-auto px-3 sm:px-4 lg:px-8 space-y-4 sm:space-y-6">
@@ -451,13 +449,13 @@ export default function ReadingLesson({
           { 
             title: "Repetir Texto", 
             icon: RotateCcw, 
-            action: () => speak(text),
+            action: () => playText(text),
             color: "blue"
           },
           { 
             title: "Modo Silencioso", 
             icon: VolumeX, 
-            action: stopSpeaking,
+            action: stopAudio,
             color: "gray"
           },
           { 
