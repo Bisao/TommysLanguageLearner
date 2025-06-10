@@ -13,7 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import Mascot from "@/components/mascot";
 import tommyLogoPath from "@assets/Screenshot_2025-06-04_015828-removebg-preview.png";
-import Header from "@/components/header";
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -98,15 +97,16 @@ export default function Login() {
       setRememberUsername(true);
     }
 
-    if (savedAutoLogin && savedUsername && savedPassword) {
+    if (savedAutoLogin && savedPassword && savedUsername) {
       setFormData(prev => ({ ...prev, username: savedUsername, password: savedPassword }));
       setAutoLogin(true);
-      setRememberUsername(true);
-      
-      // Perform auto login after component is fully loaded
+      // Auto-login after a short delay
       setTimeout(() => {
-        loginMutation.mutate({ username: savedUsername, password: savedPassword });
-      }, 500);
+        loginMutation.mutate({
+          username: savedUsername,
+          password: savedPassword,
+        });
+      }, 1000);
     }
   }, []);
 
@@ -115,44 +115,41 @@ export default function Login() {
       const response = await apiRequest("POST", "/api/auth/login", data);
       return response.json();
     },
-    onSuccess: () => {
-      // Save username if remember is checked
+    onSuccess: (data) => {
+      toast({
+        title: "Login realizado com sucesso!",
+        description: `Bem-vindo de volta, ${data.user.username}!`,
+      });
+
+      // Save preferences
       if (rememberUsername) {
         localStorage.setItem("rememberedUsername", formData.username);
         localStorage.setItem("rememberUsername", "true");
       } else {
         localStorage.removeItem("rememberedUsername");
-        localStorage.removeItem("rememberUsername");
+        localStorage.setItem("rememberUsername", "false");
       }
 
-      // Save credentials if auto login is checked
       if (autoLogin) {
         localStorage.setItem("savedPassword", formData.password);
         localStorage.setItem("autoLogin", "true");
       } else {
         localStorage.removeItem("savedPassword");
-        localStorage.removeItem("autoLogin");
+        localStorage.setItem("autoLogin", "false");
       }
 
-      toast({
-        title: "Login realizado com sucesso!",
-        description: "Entrando em modo fullscreen...",
-      });
-      
-      // Enter fullscreen mode
+      // Enter fullscreen and navigate
       setTimeout(() => {
         enterFullscreen();
       }, 500);
-      
-      // Invalidate user query to refetch user data
+
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      // Redirect to home after a delay to allow fullscreen to activate
       setTimeout(() => {
         setLocation("/home");
       }, 1000);
     },
     onError: (error: any) => {
-      setError("Usuário ou senha incorretos");
+      setError("Usuário ou senha incorretos. Tente novamente.");
     },
   });
 
@@ -161,48 +158,42 @@ export default function Login() {
       const response = await apiRequest("POST", "/api/auth/register", data);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Conta criada com sucesso!",
-        description: "Entrando em modo fullscreen...",
+        description: `Bem-vindo, ${data.user.username}!`,
       });
-      
-      // Enter fullscreen mode
+
       setTimeout(() => {
         enterFullscreen();
       }, 500);
-      
-      // Invalidate user query to refetch user data
+
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      // Redirect to home after a delay to allow fullscreen to activate
       setTimeout(() => {
         setLocation("/home");
       }, 1000);
     },
     onError: (error: any) => {
-      setError("Erro ao criar conta. Tente outro nome de usuário.");
+      setError("Erro ao criar conta. Tente novamente.");
     },
   });
 
   const guestLoginMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/auth/guest", {});
+      const response = await apiRequest("POST", "/api/auth/guest-login", {});
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast({
         title: "Entrando como convidado!",
-        description: "Entrando em modo fullscreen...",
+        description: "Explore o Tommy's Academy!",
       });
-      
-      // Enter fullscreen mode
+
       setTimeout(() => {
         enterFullscreen();
       }, 500);
-      
-      // Invalidate user query to refetch user data
+
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      // Redirect to home after a delay to allow fullscreen to activate
       setTimeout(() => {
         setLocation("/home");
       }, 1000);
@@ -240,206 +231,186 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-teal-50 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex flex-col">
       {/* Fullscreen Toggle Button */}
       <Button
         onClick={toggleFullscreen}
-        className="fixed top-4 right-4 z-50 cartoon-button-secondary p-2"
+        className="fixed top-4 right-4 z-50 btn-secondary touch-friendly"
         size="sm"
         title={isFullscreen ? "Sair do modo fullscreen" : "Entrar em modo fullscreen"}
       >
         {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
       </Button>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md mx-auto"
-      >
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <div className="flex flex-col items-center justify-center space-y-4 mb-4">
-            <img 
-              src={tommyLogoPath} 
-              alt="Tommy's Academy Logo" 
-              className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 object-contain"
-            />
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-cartoon-dark text-center">Tommy's Academy</h1>
-          </div>
-
-          <p className="text-sm sm:text-base text-gray-600 px-2">
-            {isLogin ? "Entre na sua conta" : "Crie sua conta"} e continue sua jornada de aprendizado!
-          </p>
-        </div>
-
-        {/* Login/Register Card */}
-        <Card className="cartoon-card border-cartoon-teal shadow-lg">
-          <CardHeader className="text-center pb-4">
-            <CardTitle className="text-xl sm:text-2xl font-bold text-cartoon-dark">
-              {isLogin ? "Entrar" : "Criar Conta"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 sm:px-6">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Username */}
-              <div className="space-y-2">
-                <Label htmlFor="username" className="text-cartoon-dark font-semibold">
-                  Nome de usuário
-                </Label>
-                <div className="relative">
-                  <User className="absolute left-3 top-3 text-gray-400" size={20} />
-                  <Input
-                    id="username"
-                    type="text"
-                    placeholder="Digite seu nome de usuário"
-                    className="pl-10 h-12 text-base border-2 border-gray-300 focus:border-cartoon-teal touch-target"
-                    value={formData.username}
-                    onChange={(e) => handleInputChange("username", e.target.value)}
-                    autoComplete="username"
-                  />
-                </div>
+      {/* Scrollable Content */}
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        <div className="w-full max-w-md mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full"
+          >
+            {/* Header */}
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="flex flex-col items-center justify-center space-y-3 sm:space-y-4 mb-4">
+                <img 
+                  src={tommyLogoPath} 
+                  alt="Tommy's Academy Logo" 
+                  className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 object-contain"
+                />
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text text-center">Tommy's Academy</h1>
               </div>
 
-              {/* Email (only for register) */}
-              {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-cartoon-dark font-semibold">
-                    Email
-                  </Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 text-gray-400" size={20} />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Digite seu email"
-                      className="pl-10 h-12 text-base border-2 border-gray-300 focus:border-cartoon-teal touch-target"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Password */}
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-cartoon-dark font-semibold">
-                  Senha
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Digite sua senha"
-                    className="pl-10 h-12 text-base border-2 border-gray-300 focus:border-cartoon-teal touch-target"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange("password", e.target.value)}
-                    autoComplete="current-password"
-                  />
-                </div>
-              </div>
-
-              {/* Remember Options (only for login) */}
-              {isLogin && (
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="rememberUsername"
-                      checked={rememberUsername}
-                      onCheckedChange={(checked) => setRememberUsername(checked as boolean)}
-                    />
-                    <Label htmlFor="rememberUsername" className="text-sm text-cartoon-dark">
-                      Lembrar nome de usuário
-                    </Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="autoLogin"
-                      checked={autoLogin}
-                      onCheckedChange={(checked) => {
-                        const isChecked = checked as boolean;
-                        setAutoLogin(isChecked);
-                        if (isChecked) {
-                          setRememberUsername(true); // Auto login requires remembering username
-                        }
-                      }}
-                    />
-                    <Label htmlFor="autoLogin" className="text-sm text-cartoon-dark">
-                      Login automático
-                    </Label>
-                  </div>
-                </div>
-              )}
-
-              {/* Error Message */}
-              {error && (
-                <Alert className="border-cartoon-red bg-red-50">
-                  <AlertDescription className="text-cartoon-red">
-                    {error}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={loginMutation.isPending || registerMutation.isPending || guestLoginMutation.isPending}
-                className="w-full cartoon-button h-10 sm:h-12 text-base sm:text-lg"
-              >
-                {loginMutation.isPending || registerMutation.isPending
-                  ? "Processando..."
-                  : isLogin
-                  ? "Entrar"
-                  : "Criar Conta"}
-              </Button>
-            </form>
-
-            {/* Guest Login Button */}
-            {isLogin && (
-              <div className="mt-4">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-gray-300" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white px-2 text-gray-500">ou</span>
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={guestLoginMutation.isPending || loginMutation.isPending || registerMutation.isPending}
-                  onClick={() => guestLoginMutation.mutate()}
-                  className="w-full mt-4 h-10 sm:h-12 text-base sm:text-lg border-2 border-gray-300 hover:border-cartoon-teal hover:bg-cartoon-teal/10 transition-colors"
-                >
-                  {guestLoginMutation.isPending ? "Entrando..." : "Entrar como Convidado"}
-                </Button>
-              </div>
-            )}
-
-            {/* Toggle Login/Register */}
-            <div className="text-center mt-4 sm:mt-6">
-              <p className="text-sm sm:text-base text-gray-600">
-                {isLogin ? "Não tem uma conta?" : "Já tem uma conta?"}
+              <p className="text-sm sm:text-base text-muted-foreground px-2">
+                {isLogin ? "Entre na sua conta" : "Crie sua conta"} e continue sua jornada de aprendizado!
               </p>
-              <Button
-                variant="link"
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setError("");
-                  setFormData({ username: "", email: "", password: "" });
-                }}
-                className="text-cartoon-teal font-semibold text-sm sm:text-base"
-              >
-                {isLogin ? "Criar nova conta" : "Fazer login"}
-              </Button>
             </div>
 
+            {/* Login/Register Card */}
+            <Card className="card-elevated shadow-lg mb-6">
+              <CardHeader className="text-center pb-4">
+                <CardTitle className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">
+                  {isLogin ? "Entrar" : "Criar Conta"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-4 sm:px-6">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Username */}
+                  <div className="space-y-2">
+                    <Label htmlFor="username" className="text-gray-700 dark:text-gray-300 font-semibold">
+                      Nome de usuário
+                    </Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-3 text-gray-400" size={20} />
+                      <Input
+                        id="username"
+                        type="text"
+                        placeholder="Digite seu nome de usuário"
+                        className="input-modern pl-10 h-12 text-base touch-friendly"
+                        value={formData.username}
+                        onChange={(e) => handleInputChange("username", e.target.value)}
+                        autoComplete="username"
+                      />
+                    </div>
+                  </div>
 
-          </CardContent>
-        </Card>
-      </motion.div>
+                  {/* Email (only for register) */}
+                  {!isLogin && (
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-gray-700 dark:text-gray-300 font-semibold">
+                        Email
+                      </Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 text-gray-400" size={20} />
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="Digite seu email"
+                          className="input-modern pl-10 h-12 text-base touch-friendly"
+                          value={formData.email}
+                          onChange={(e) => handleInputChange("email", e.target.value)}
+                          autoComplete="email"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Password */}
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-gray-700 dark:text-gray-300 font-semibold">
+                      Senha
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 text-gray-400" size={20} />
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Digite sua senha"
+                        className="input-modern pl-10 h-12 text-base touch-friendly"
+                        value={formData.password}
+                        onChange={(e) => handleInputChange("password", e.target.value)}
+                        autoComplete={isLogin ? "current-password" : "new-password"}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Options (only for login) */}
+                  {isLogin && (
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="remember"
+                          checked={rememberUsername}
+                          onCheckedChange={(checked) => setRememberUsername(checked as boolean)}
+                          className="touch-friendly"
+                        />
+                        <Label htmlFor="remember" className="text-sm text-gray-600 dark:text-gray-400">
+                          Lembrar nome de usuário
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="autologin"
+                          checked={autoLogin}
+                          onCheckedChange={(checked) => setAutoLogin(checked as boolean)}
+                          className="touch-friendly"
+                        />
+                        <Label htmlFor="autologin" className="text-sm text-gray-600 dark:text-gray-400">
+                          Login automático
+                        </Label>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Error Message */}
+                  {error && (
+                    <Alert className="border-red-200 bg-red-50 dark:bg-red-900/20">
+                      <AlertDescription className="text-red-700 dark:text-red-300">
+                        {error}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {/* Submit Button */}
+                  <Button
+                    type="submit"
+                    className="btn-primary w-full h-12 text-base touch-friendly"
+                    disabled={loginMutation.isPending || registerMutation.isPending}
+                  >
+                    {(loginMutation.isPending || registerMutation.isPending) ? "Carregando..." : (isLogin ? "Entrar" : "Criar Conta")}
+                  </Button>
+
+                  {/* Toggle Mode */}
+                  <div className="text-center pt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsLogin(!isLogin);
+                        setError("");
+                      }}
+                      className="text-blue-600 dark:text-blue-400 hover:underline text-sm touch-friendly"
+                    >
+                      {isLogin ? "Não tem uma conta? Criar conta" : "Já tem uma conta? Entrar"}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Guest Login */}
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <Button
+                    onClick={() => guestLoginMutation.mutate()}
+                    variant="outline"
+                    className="w-full h-12 text-base touch-friendly"
+                    disabled={guestLoginMutation.isPending}
+                  >
+                    {guestLoginMutation.isPending ? "Carregando..." : "Entrar como Convidado"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </div>
     </div>
   );
 }

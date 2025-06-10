@@ -36,10 +36,10 @@ export default function Layout({
         />
       </div>
 
-      {/* Main Content - Enhanced responsive spacing */}
-      <main className="pt-16 sm:pt-20 lg:pt-24 min-h-screen">
+      {/* Main Content - Enhanced responsive spacing with proper scrolling */}
+      <main className="pt-16 sm:pt-20 lg:pt-24 min-h-screen overflow-y-auto">
         <div className="container-responsive">
-          <div className="section-spacing">
+          <div className="py-4 sm:py-6 lg:py-8 pb-8 sm:pb-12 lg:pb-16">
             <div className="w-full max-w-none">
               {children}
             </div>

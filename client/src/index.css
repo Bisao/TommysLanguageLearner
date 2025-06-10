@@ -112,17 +112,26 @@
   min-height: 96px;
 }
 
-/* Content spacing for fixed header */
+/* Content spacing for fixed header with scroll support */
 .content-mobile {
   padding-top: 64px;
+  padding-bottom: 2rem;
+  min-height: calc(100vh - 64px);
+  overflow-y: auto;
 }
 
 .content-tablet {
   padding-top: 80px;
+  padding-bottom: 3rem;
+  min-height: calc(100vh - 80px);
+  overflow-y: auto;
 }
 
 .content-desktop {
   padding-top: 96px;
+  padding-bottom: 4rem;
+  min-height: calc(100vh - 96px);
+  overflow-y: auto;
 }
 
 /* Smooth transitions */
@@ -214,7 +223,7 @@
   }
   
   .section-spacing {
-    @apply py-8 sm:py-12 lg:py-16;
+    @apply py-6 sm:py-8 lg:py-12 pb-12 sm:pb-16 lg:pb-20;
   }
   
   .text-responsive {
