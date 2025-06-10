@@ -3,7 +3,7 @@ import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/header";
-import ReadingLesson from "@/components/reading-lesson";
+import ReadingLessonRefactored from "@/components/reading-lesson-refactored";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -157,7 +157,7 @@ These trends suggest that the future of food will be more diverse, more sustaina
           transition={{ duration: 0.8, delay: 0.3 }}
           className="px-3 sm:px-4 lg:px-8"
         >
-          <ReadingLesson
+          <ReadingLessonRefactored
             title={currentLessonData.title}
             text={currentLessonData.text}
             onComplete={handleLessonComplete}

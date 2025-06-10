@@ -69,9 +69,9 @@ export class ReadingGuide {
    * Inicializa o sistema com um texto específico
    */
   public initialize(title: string, text: string): void {
-    this.titleWords = this.splitTextIntoWords(title);
+    this.titleWords = this.splitTextIntoWordsPrivate(title);
     this.paragraphs = text.split('\n\n').filter(p => p.trim().length > 0);
-    this.textWords = this.splitTextIntoWords(text);
+    this.textWords = this.splitTextIntoWordsPrivate(text);
     this.allWords = [...this.titleWords, ...this.textWords];
     
     console.log('[ReadingGuide] Inicializado com:', {
@@ -83,9 +83,9 @@ export class ReadingGuide {
   }
 
   /**
-   * Divide texto em palavras, mantendo pontuação anexa
+   * Divide texto em palavras, mantendo pontuação anexa (versão privada)
    */
-  private splitTextIntoWords(inputText: string): string[] {
+  private splitTextIntoWordsPrivate(inputText: string): string[] {
     const normalizedText = inputText.replace(/\s+/g, ' ').trim();
     
     return normalizedText.split(/\s+/)
@@ -144,12 +144,12 @@ export class ReadingGuide {
     
     // Calcular índice global
     for (let i = 0; i < paragraphIndex; i++) {
-      globalIndex += this.splitTextIntoWords(this.paragraphs[i]).length;
+      globalIndex += this.splitTextIntoWordsPrivate(this.paragraphs[i]).length;
     }
     globalIndex += wordIndex;
 
     // Verificar linking sounds
-    const paragraphWords = this.splitTextIntoWords(this.paragraphs[paragraphIndex]);
+    const paragraphWords = this.splitTextIntoWordsPrivate(this.paragraphs[paragraphIndex]);
     const nextWord = wordIndex < paragraphWords.length - 1 ? paragraphWords[wordIndex + 1] : null;
     const previousWord = wordIndex > 0 ? paragraphWords[wordIndex - 1] : null;
     
