@@ -45,7 +45,7 @@ These trends suggest that the future of food will be more diverse, more sustaina
     setAudioControls(controls);
   }, []);
 
-  if (lessonCompleted) {
+  if (false && lessonCompleted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
         <Header user={user} />
