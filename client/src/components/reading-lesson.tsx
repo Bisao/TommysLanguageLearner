@@ -77,7 +77,9 @@ export default function ReadingLesson({
 
   // Split text into paragraphs and then words, preserving structure
   const paragraphs = text.split('\n\n').filter(p => p.trim().length > 0);
-  const allWords = text.split(/\s+/).filter(word => word.length > 0);
+  const titleWords = title.split(/\s+/).filter(word => word.length > 0);
+  const textWords = text.split(/\s+/).filter(word => word.length > 0);
+  const allWords = [...titleWords, ...textWords]; // Incluir palavras do título
   const totalWords = allWords.length;
 
   const handleWordClick = useCallback((word: string, index: number) => {
@@ -180,7 +182,8 @@ export default function ReadingLesson({
     console.log(`[ReadingLesson] Iniciando leitura guiada da posição ${fromPosition}`);
     setPendingPause(false);
     
-    playText(text, 'en-US', fromPosition, (word: string, wordIndex: number) => {
+    const fullText = `${title}. ${text}`;
+    playText(fullText, 'en-US', fromPosition, (word: string, wordIndex: number) => {
       console.log(`[ReadingLesson] Destacando palavra ${wordIndex}: "${word}"`);
       
       // Sempre destacar a palavra atual
@@ -475,10 +478,6 @@ export default function ReadingLesson({
       >
         <Card className="card-glass border-2 border-indigo-200 min-h-[400px]">
           <CardHeader className="text-center pb-4">
-            <CardTitle className="text-2xl sm:text-3xl gradient-text-reading mb-4">
-              {title}
-            </CardTitle>
-
             {/* Reading Controls */}
             <div className="flex flex-wrap justify-center gap-3 mb-4">
               <Button
@@ -583,11 +582,73 @@ export default function ReadingLesson({
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
+              {/* Título como parte do texto a ser lido */}
+              <div className="text-center mb-6">
+                <h2 className="text-2xl sm:text-3xl gradient-text-reading font-bold">
+                  {title.split(' ').map((word, wordIndex) => {
+                    const globalIndex = wordIndex;
+                    const isCurrentWord = globalIndex === currentWordIndex && currentWordIndex >= 0;
+                    const isCompleted = completedWords.has(globalIndex);
+                    const pronunciationFeedback = pronunciationScores.get(globalIndex);
+                    const isNextToRead = readingMode === 'practice' && globalIndex === currentWordIndex && currentWordIndex >= 0;
+
+                    let wordClassName = '';
+                    let wordTitle = `Palavra ${globalIndex + 1}: ${word}`;
+
+                    if (isNextToRead && !isCompleted) {
+                      wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 animate-pulse border-2 border-blue-600';
+                    } else if (pronunciationFeedback) {
+                      const scorePercentage = Math.round(pronunciationFeedback.score * 100);
+                      wordTitle += ` - Pronúncia: ${pronunciationFeedback.status === 'correct' ? 'Excelente' : pronunciationFeedback.status === 'close' ? 'Boa' : 'Precisa melhorar'} (${scorePercentage}%)`;
+                      
+                      switch (pronunciationFeedback.status) {
+                        case 'correct':
+                          wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-bold border-2 border-green-300 shadow-md';
+                          break;
+                        case 'close':
+                          wordClassName = 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 font-medium border-2 border-yellow-300 shadow-md';
+                          break;
+                        case 'incorrect':
+                          wordClassName = 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 font-medium border-2 border-red-300 shadow-md';
+                          break;
+                      }
+                    } else if (isCurrentWord && readingMode === 'guided' && audioIsPlaying) {
+                      wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 border-2 border-blue-300';
+                    } else if (isCompleted) {
+                      wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-medium border border-green-300';
+                    } else {
+                      wordClassName = 'hover:bg-gray-100 hover:shadow-md';
+                    }
+
+                    return (
+                      <span
+                        key={`title-${wordIndex}`}
+                        data-word-index={globalIndex}
+                        className={`
+                          inline-block mx-0.5 sm:mx-1 my-0.5 sm:my-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md cursor-pointer
+                          transition-all duration-200 hover:scale-105 relative
+                          ${wordClassName}
+                        `}
+                        onClick={() => handleWordClick(word, globalIndex)}
+                        title={wordTitle}
+                        style={{
+                          zIndex: isCurrentWord && readingMode === 'guided' ? 10 : 1
+                        }}
+                      >
+                        {word}
+                      </span>
+                    );
+                  })}
+                </h2>
+              </div>
+
+              {/* Parágrafos do texto */}
               {paragraphs.map((paragraph, pIndex) => (
                 <p key={`paragraph-${pIndex}`} className="leading-relaxed">
                   {paragraph.split(' ').map((word, wordIndex) => {
-                  // Calcular índice global de forma mais precisa
-                  let globalIndex = 0;
+                  // Calcular índice global incluindo palavras do título
+                  const titleWordsCount = title.split(' ').filter(w => w.trim().length > 0).length;
+                  let globalIndex = titleWordsCount; // Começar após as palavras do título
                   for (let i = 0; i < pIndex; i++) {
                     globalIndex += paragraphs[i].split(' ').filter(w => w.trim().length > 0).length;
                   }
