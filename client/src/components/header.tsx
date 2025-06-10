@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import { ThemeToggle } from "@/components/theme-toggle";
 import NotificationSystem from "@/components/notification-system";
 import { useNotifications } from "@/hooks/use-notifications";
+import MobileNavigation from "@/components/mobile-navigation";
 import Mascot from "./mascot";
 import tommyLogoPath from "@assets/Screenshot_2025-06-04_015828-removebg-preview.png";
 
@@ -74,8 +75,13 @@ export default function Header({ user, audioControls, showAudioControls, isReadi
     <header className="w-full h-16 sm:h-20 lg:h-24">
       <div className="h-full px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-full">
-          {/* Logo Section / Reading Lesson Navigation */}
-          {isReadingPage ? (
+          {/* Mobile Navigation Menu */}
+          <div className="flex items-center space-x-2">
+            <MobileNavigation user={user} />
+            
+            {/* Logo Section / Reading Lesson Navigation */}
+            <div className="flex-1">
+              {isReadingPage ? (
             <motion.div 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -121,26 +127,28 @@ export default function Header({ user, audioControls, showAudioControls, isReadi
                 </motion.div>
               </div>
             </motion.div>
-          ) : (
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center space-x-2 cursor-pointer"
-              onClick={() => setLocation("/home")}
-            >
-              <img 
-                src={tommyLogoPath} 
-                alt="Tommy's Academy Logo" 
-                className="w-7 h-7 sm:w-9 sm:h-9 lg:w-10 lg:h-10 object-contain"
-              />
-              <div className="hidden sm:block">
-                <h1 className="text-base sm:text-lg lg:text-xl font-bold gradient-text">Tommy's Academy</h1>
-              </div>
-              <div className="sm:hidden">
-                <h1 className="text-sm font-bold gradient-text">Tommy's</h1>
-              </div>
-            </motion.div>
-          )}
+              ) : (
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex items-center space-x-2 cursor-pointer"
+                  onClick={() => setLocation("/home")}
+                >
+                  <img 
+                    src={tommyLogoPath} 
+                    alt="Tommy's Academy Logo" 
+                    className="w-7 h-7 sm:w-9 sm:h-9 lg:w-10 lg:h-10 object-contain"
+                  />
+                  <div className="hidden sm:block">
+                    <h1 className="text-base sm:text-lg lg:text-xl font-bold gradient-text">Tommy's Academy</h1>
+                  </div>
+                  <div className="sm:hidden">
+                    <h1 className="text-sm font-bold gradient-text">Tommy's</h1>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </div>
 
           {/* Audio Controls for Reading Lesson */}
           {showAudioControls && audioControls && (
@@ -256,7 +264,7 @@ export default function Header({ user, audioControls, showAudioControls, isReadi
               </Avatar>
             </Button>
 
-            </motion.div>
+          </motion.div>
         </div>
       </div>
     </header>

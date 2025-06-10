@@ -155,7 +155,7 @@ export default function Home() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+          className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8"
         >
           <Card className="cartoon-card group cursor-pointer transition-all duration-300 hover:scale-105" onClick={() => setLocation("/lessons")}>
             <CardContent className="p-4 text-center">

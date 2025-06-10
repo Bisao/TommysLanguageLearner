@@ -583,7 +583,11 @@ html,
     transform: scale(1.1);
     box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
   }
-
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
 
 /* Sistema de Prática de Pronúncia */
 .pronunciation-correct {
@@ -687,8 +691,6 @@ html,
 
 .confidence-low {
   box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
-}
-
 }
 
 .gradient-text-reading {
