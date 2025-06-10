@@ -246,11 +246,7 @@ export function useAudio() {
         // Tratamento específico para diferentes tipos de erro
         if (event.error === 'interrupted') {
           console.log("Speech interrupted (expected during pause/resume)");
-          // Durante interrupção esperada, manter o estado pausado se estivermos pausando
-          if (isPaused) {
-            setIsPlaying(false);
-            setIsPaused(true);
-          }
+          // Durante interrupção esperada, não alterar estados se estamos pausando
           return;
         } else if (event.error === 'canceled') {
           console.log("Speech canceled");
@@ -376,30 +372,42 @@ export function useAudio() {
         const words = currentText.split(' ').filter(word => word.trim().length > 0);
         console.log(`Pausing at word position: ${currentWordPosition}`);
         
-        speechSynthesis.pause();
+        // Detectar se o dispositivo suporta pause
+        const supportsNativePause = !(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
         
-        // Verificar se realmente pausou
-        setTimeout(() => {
-          if (speechSynthesis.paused || !speechSynthesis.speaking) {
-            setIsPaused(true);
-            setIsPlaying(false);
-            console.log("Speech synthesis paused successfully at position:", currentWordPosition);
-          } else {
-            console.log("Pause not supported on this device, using cancel with position tracking");
-            speechSynthesis.cancel();
-            setIsPaused(true);
-            setIsPlaying(false);
-            // Keep utterance and position for resume functionality
-          }
-        }, 50);
+        if (supportsNativePause) {
+          speechSynthesis.pause();
+          
+          // Verificar se realmente pausou
+          setTimeout(() => {
+            if (speechSynthesis.paused && speechSynthesis.speaking) {
+              setIsPaused(true);
+              setIsPlaying(false);
+              console.log("Speech synthesis paused successfully at position:", currentWordPosition);
+            } else {
+              console.log("Native pause failed, using cancel with position tracking");
+              speechSynthesis.cancel();
+              setIsPaused(true);
+              setIsPlaying(false);
+            }
+          }, 100);
+        } else {
+          console.log("Mobile device detected - using cancel with position tracking instead of pause");
+          speechSynthesis.cancel();
+          setIsPaused(true);
+          setIsPlaying(false);
+        }
         
       } catch (error) {
         console.warn("Error pausing speech synthesis:", error);
         // Fallback para dispositivos que não suportam pause
-        speechSynthesis.cancel();
+        try {
+          speechSynthesis.cancel();
+        } catch (cancelError) {
+          console.warn("Error canceling speech:", cancelError);
+        }
         setIsPaused(true);
         setIsPlaying(false);
-        // Keep position for resume functionality
       }
     } else if (speechSynthesis.speaking && speechSynthesis.paused) {
       // Já está pausado
