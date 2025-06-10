@@ -110,78 +110,7 @@ export default function Home() {
           <p className="text-base sm:text-lg lg:text-xl text-muted-foreground px-4 mb-6">Continue sua jornada de aprendizado com lições divertidas!</p>
         </motion.div>
 
-        {/* Daily Progress Dashboard */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
-        >
-          {/* Daily Goal Progress */}
-          <Card className="cartoon-card border-cartoon-coral">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <Target className="text-cartoon-coral mr-2" size={20} />
-                Meta Diária
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-cartoon-coral mb-2">
-                  {Math.round(dailyProgress)}%
-                </div>
-                <Progress value={dailyProgress} className="h-3 mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  {(dailyStats as any)?.lessonsCompleted || 0} de {(user as any)?.dailyGoal || 4} lições
-                </p>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Current Streak */}
-          <Card className="cartoon-card border-cartoon-yellow">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <Flame className="text-cartoon-yellow mr-2" size={20} />
-                Sequência
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-cartoon-yellow mb-2">
-                  {(user as any)?.streak || 0}
-                </div>
-                <p className="text-sm text-muted-foreground">dias seguidos</p>
-                <div className="flex justify-center mt-2">
-                  {[...Array(Math.min((user as any)?.streak || 0, 7))].map((_, i) => (
-                    <Flame key={i} className="text-cartoon-yellow mx-0.5" size={16} />
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Total XP */}
-          <Card className="cartoon-card border-cartoon-blue">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <Star className="text-cartoon-blue mr-2" size={20} />
-                XP Total
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-cartoon-blue mb-2">
-                  {(user as any)?.totalXP || 0}
-                </div>
-                <p className="text-sm text-muted-foreground">pontos de experiência</p>
-                <Badge variant="outline" className="mt-2">
-                  Nível {(user as any)?.level || 1}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
 
 
         {/* Recommended Next Action */}

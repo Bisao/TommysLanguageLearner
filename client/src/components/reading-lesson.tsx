@@ -254,6 +254,8 @@ export default function ReadingLesson({
     setPronunciationScores(new Map());
     setLastTranscriptWords([]);
     setIsAnalyzing(false);
+    setAudioFinished(false);
+    setShowCompletionMessage(false);
     setLastProcessedTranscript(''); // Resetar controle de transcript
     stopListening();
     resetTranscript();
@@ -276,6 +278,17 @@ export default function ReadingLesson({
   useEffect(() => {
     setIsPlaying(audioIsPlaying);
   }, [audioIsPlaying]);
+
+  // Detect when audio reading is finished
+  useEffect(() => {
+    if (!audioIsPlaying && !isPaused && currentWordIndex >= totalWords - 1 && !isStopped) {
+      // Audio finished reading all words
+      setAudioFinished(true);
+      setTimeout(() => {
+        setShowCompletionMessage(true);
+      }, 1000); // Show message 1 second after audio finishes
+    }
+  }, [audioIsPlaying, isPaused, currentWordIndex, totalWords, isStopped]);
 
   // Removido monitoramento de pause state para evitar interferência com highlighting
 
@@ -652,23 +665,37 @@ export default function ReadingLesson({
 
             {/* Completion Message */}
             <AnimatePresence>
-              {readingProgress >= 80 && (
+              {showCompletionMessage && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
                   className="mt-6 text-center"
                 >
                   <Card className="border-2 border-green-300 bg-green-50">
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-center gap-2 text-green-700">
+                      <div className="flex items-center justify-center gap-2 text-green-700 mb-3">
                         <CheckCircle2 className="w-6 h-6" />
                         <span className="font-semibold text-lg">
-                          Excelente! Você completou a leitura!
+                          Você terminou a leitura!
                         </span>
                       </div>
-                      <p className="text-green-600 mt-2">
-                        Preparando sua próxima lição...
+                      <p className="text-green-600 mb-4">
+                        Que tal praticar a sua pronúncia agora?
                       </p>
+                      <Button
+                        onClick={() => {
+                          // Scroll to top
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                          // Hide completion message
+                          setShowCompletionMessage(false);
+                          // Switch to practice mode
+                          setReadingMode('practice');
+                        }}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        Voltar ao Topo
+                      </Button>
                     </CardContent>
                   </Card>
                 </motion.div>
