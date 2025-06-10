@@ -1,6 +1,7 @@
 
 import React from 'react';
 import Header from './header';
+import { ScrollArea } from './ui/scroll-area';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -37,9 +38,11 @@ export default function Layout({
 
       {/* Content Panel - Separado visualmente do header */}
       <div className="flex-1 w-full mt-2 bg-white dark:bg-gray-800 rounded-t-lg shadow-inner overflow-hidden">
-        <div className="h-full p-4">
-          {children}
-        </div>
+        <ScrollArea className="h-full">
+          <div className="p-4">
+            {children}
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );
