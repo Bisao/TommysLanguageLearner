@@ -444,7 +444,7 @@ export function useAudio() {
           }
         } else {
           // Se não está falando, tentar retomar da posição atual
-          console.log("Speech was stopped, restarting from current position:", currentWordPosition);
+          console.log("Speech was stopped, will need to restart from current position:", currentWordPosition);
           setIsPaused(false);
           setIsPlaying(false);
           setCurrentUtterance(null);

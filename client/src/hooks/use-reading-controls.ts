@@ -28,7 +28,16 @@ export function useReadingControls(title: string, text: string) {
   const [isPaused, setIsPaused] = useState(false);
   const autoReadingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { playText, pauseAudio, resumeAudio, stopAudio, isPlaying, isPaused: isAudioPaused } = useAudio();
+  const { 
+    playText, 
+    pauseAudio, 
+    resumeAudio, 
+    stopAudio, 
+    isPlaying, 
+    isPaused: isAudioPaused,
+    currentWordPosition,
+    isStopped
+  } = useAudio();
   const { 
     isListening, 
     transcript, 

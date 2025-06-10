@@ -78,9 +78,9 @@ export default function ReadingLesson({
     }
   }, [playText, isSupported]);
 
-  const startGuidedReading = useCallback(() => {
+  const startGuidedReading = useCallback((fromPosition: number = 0) => {
     // Use the useAudio hook with perfect word boundary synchronization
-    playText(text, 'en-US', 0, (word: string, wordIndex: number) => {
+    playText(text, 'en-US', fromPosition, (word: string, wordIndex: number) => {
       // Only highlight if speech is actually playing (not paused)
       if (speechSynthesis.speaking && !speechSynthesis.paused) {
         setCurrentWordIndex(wordIndex);
@@ -311,6 +311,11 @@ export default function ReadingLesson({
                     <Pause className="w-4 h-4 mr-2" />
                     Pausar
                   </>
+                ) : isPaused && !isStopped ? (
+                  <>
+                    <Play className="w-4 h-4 mr-2" />
+                    Continuar
+                  </>
                 ) : (
                   <>
                     <Play className="w-4 h-4 mr-2" />
@@ -318,6 +323,21 @@ export default function ReadingLesson({
                   </>
                 )}
               </Button>
+
+              {(isPlaying || isPaused) && (
+                <Button
+                  onClick={() => {
+                    stopAudio();
+                    setIsPlaying(false);
+                    setCurrentWordIndex(-1);
+                  }}
+                  variant="outline"
+                  className="border-2 border-red-300 text-red-600 hover:bg-red-50"
+                >
+                  <VolumeX className="w-4 h-4 mr-2" />
+                  Parar
+                </Button>
+              )}
 
               {speechRecognitionSupported && readingMode === 'practice' && (
                 <Button
