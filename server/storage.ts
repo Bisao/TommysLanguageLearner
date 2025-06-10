@@ -13,7 +13,7 @@ import {
   type InsertUserStats,
   type Question
 } from "@shared/schema";
-import { db } from "./db";
+// import { db } from "./db"; // Commented out for in-memory storage mode
 import { eq, and } from "drizzle-orm";
 import { calculateRealisticUserData, getLastActiveDate } from "./user-utils";
 
@@ -78,6 +78,7 @@ export class MemStorage implements IStorage {
       dailyGoal: 15,
       lastActiveDate: new Date().toISOString().split('T')[0],
       achievements: ["first_lesson", "week_warrior", "vocabulary_master"],
+      createdAt: new Date(),
     };
     this.users.set(1, defaultUser);
     this.currentUserId = 2;
@@ -338,7 +339,8 @@ export class MemStorage implements IStorage {
       level: 1,
       dailyGoal: 15,
       lastActiveDate: null,
-      achievements: []
+      achievements: [],
+      createdAt: new Date()
     };
     this.users.set(id, user);
     return user;
@@ -455,7 +457,8 @@ export class MemStorage implements IStorage {
   }
 }
 
-// rewrite MemStorage to DatabaseStorage
+/* 
+// DatabaseStorage commented out for in-memory mode
 export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -613,4 +616,4 @@ export class DatabaseStorage implements IStorage {
   }
 }
 
-export const storage = new DatabaseStorage();
+export const storage = new MemStorage();
