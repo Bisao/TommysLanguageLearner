@@ -1,6 +1,6 @@
 
 import { useQuery } from "@tanstack/react-query";
-import Header from "@/components/header";
+import Layout from "@/components/layout";
 import LessonModal from "@/components/lesson-modal";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -31,6 +31,85 @@ export default function Vocabulary() {
     setShowLessonModal(false);
     setSelectedLesson(null);
   };
+
+  return (
+    <Layout user={user as any}>
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8"
+        >
+          <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-4">
+            Vocabulário
+          </h1>
+          <p className="text-lg text-muted-foreground">
+            Aprenda novas palavras e expanda seu vocabulário
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {vocabularyLessons.map((lesson: any, index: number) => (
+            <motion.div
+              key={lesson.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <Card 
+                className="cartoon-card group cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                onClick={() => openLesson(lesson.id)}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center">
+                        {lesson.completed ? (
+                          <CheckCircle className="text-white" size={24} />
+                        ) : lesson.locked ? (
+                          <Lock className="text-white" size={24} />
+                        ) : (
+                          <BookOpen className="text-white" size={24} />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-cartoon-dark">{lesson.title}</h3>
+                        <p className="text-sm text-muted-foreground">{lesson.description}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {lesson.progress !== undefined && (
+                    <div className="space-y-2">
+                      <Progress value={lesson.progress} className="h-2" />
+                      <div className="flex justify-between text-sm text-muted-foreground">
+                        <span>{lesson.progress}% completo</span>
+                        <span>{lesson.xp || 0} XP</span>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+
+        {vocabularyLessons.length === 0 && (
+          <div className="text-center py-12">
+            <BookOpen className="mx-auto text-gray-400 mb-4" size={48} />
+            <p className="text-gray-600">Nenhuma lição de vocabulário disponível ainda.</p>
+          </div>
+        )}
+      </main>
+
+      {showLessonModal && selectedLesson && (
+        <LessonModal
+          lessonId={selectedLesson}
+          onClose={closeLesson}
+        />
+      )}
+    </Layout>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 to-teal-50 pt-16 sm:pt-20">

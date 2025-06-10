@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import Header from "@/components/header";
 import ReadingLessonRefactored from "@/components/reading-lesson-refactored";
 import { ReadingTipsPanel } from "@/components/reading-tips-panel";
 import { useReadingTips } from "@/hooks/use-reading-tips";
@@ -10,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Book, Clock, Trophy, Star, Target, Sparkles } from "lucide-react";
 import { useLocation } from "wouter";
+import Layout from "@/components/layout";
 
 export default function Reading() {
   const [, setLocation] = useLocation();
@@ -36,7 +36,7 @@ These trends suggest that the future of food will be more diverse, more sustaina
     const timer = setTimeout(() => {
       showTipsPanel();
     }, 2000);
-    
+
     return () => clearTimeout(timer);
   });
 
@@ -59,7 +59,7 @@ These trends suggest that the future of food will be more diverse, more sustaina
   if (false && lessonCompleted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
-        <Header user={user} />
+        <Layout user={user} />
 
         <main className="pt-20 sm:pt-24 px-3 sm:px-4 lg:px-8">
           <div className="max-w-4xl mx-auto">
@@ -148,19 +148,15 @@ These trends suggest that the future of food will be more diverse, more sustaina
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50">
-      <Header 
-        user={user} 
-        audioControls={audioControls}
-        showAudioControls={true}
-        isReadingPage={true}
-        onGoBack={goBack}
-        lessonTitle={currentLessonData.title}
-      />
-
-      <main className="pt-20 sm:pt-24">
-
-
+    <Layout
+      user={user as any}
+      audioControls={audioControls}
+      showAudioControls={!!audioControls}
+      isReadingPage={true}
+      onGoBack={goBack}
+      lessonTitle={currentLessonData.title}
+    >
+      <main>
         {/* Lesson Content with Enhanced Animation */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -183,6 +179,6 @@ These trends suggest that the future of food will be more diverse, more sustaina
           autoHideDelay={5000}
         />
       </main>
-    </div>
+    </Layout>
   );
 }

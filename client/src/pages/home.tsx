@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import Header from "@/components/header";
+import Layout from "@/components/layout";
 import Mascot from "@/components/mascot";
 import LessonModal from "@/components/lesson-modal";
 import { useState } from "react";
@@ -87,12 +87,7 @@ export default function Home() {
   const dailyProgress = dailyStats ? ((dailyStats as any).lessonsCompleted / ((user as any)?.dailyGoal || 4)) * 100 : 0;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header user={user as any} />
-
-      {/* Spacing between header and content */}
-      <div className="h-6"></div>
-
+    <Layout user={user as any}>
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
         {/* Welcome Section */}
@@ -412,6 +407,6 @@ export default function Home() {
           onClose={closeLesson}
         />
       )}
-    </div>
+    </Layout>
   );
 }
