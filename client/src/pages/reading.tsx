@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Book, Clock, Trophy, Star, Target, Sparkles } from "lucide-react";
 import { useLocation } from "wouter";
 import Layout from "@/components/layout";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function Reading() {
   const [, setLocation] = useLocation();
@@ -158,19 +159,21 @@ These trends suggest that the future of food will be more diverse, more sustaina
     >
       <main>
         {/* Lesson Content with Enhanced Animation */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.3 }}
-          className="px-3 sm:px-4 lg:px-8"
-        >
-          <ReadingLessonRefactored
-            title={currentLessonData.title}
-            text={currentLessonData.text}
-            onComplete={handleLessonComplete}
-            onControlsReady={handleControlsReady}
-          />
-        </motion.div>
+        <ScrollArea className="h-[calc(100vh-100px)]">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="px-3 sm:px-4 lg:px-8"
+          >
+            <ReadingLessonRefactored
+              title={currentLessonData.title}
+              text={currentLessonData.text}
+              onComplete={handleLessonComplete}
+              onControlsReady={handleControlsReady}
+            />
+          </motion.div>
+        </ScrollArea>
 
         {/* Reading Tips Panel */}
         <ReadingTipsPanel 
