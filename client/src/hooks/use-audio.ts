@@ -10,270 +10,308 @@ export function useAudio() {
   const [currentWordPosition, setCurrentWordPosition] = useState(0);
   const [isStopped, setIsStopped] = useState(false);
   
-  // Refs para controle de timers e sincronização
+  // Refs para controle avançado
   const wordTimerRef = useRef<NodeJS.Timeout | null>(null);
   const cleanupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const boundaryCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const speechStateRef = useRef({ isPlaying: false, isPaused: false, currentWordIndex: 0 });
-  const lastBoundaryTimeRef = useRef<number>(0);
+  const speechStateRef = useRef({ 
+    isPlaying: false, 
+    isPaused: false, 
+    currentWordIndex: 0,
+    boundaryEventsWorking: false,
+    lastBoundaryTime: 0
+  });
   const fallbackActiveRef = useRef(false);
+  const sessionIdRef = useRef<string>("");
+
+  // Detecção de dispositivo móvel aprimorada
+  const isMobileDevice = useCallback(() => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const mobileKeywords = ['android', 'webos', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone'];
+    const isMobileUA = mobileKeywords.some(keyword => userAgent.includes(keyword));
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isSmallScreen = window.innerWidth < 768;
+    
+    return isMobileUA || isTouchDevice || isSmallScreen;
+  }, []);
 
   const cleanup = useCallback(() => {
-    if (wordTimerRef.current) {
-      clearInterval(wordTimerRef.current);
-      wordTimerRef.current = null;
-    }
-    if (cleanupTimeoutRef.current) {
-      clearTimeout(cleanupTimeoutRef.current);
-      cleanupTimeoutRef.current = null;
-    }
-    if (boundaryCheckTimeoutRef.current) {
-      clearTimeout(boundaryCheckTimeoutRef.current);
-      boundaryCheckTimeoutRef.current = null;
-    }
+    [wordTimerRef, cleanupTimeoutRef, boundaryCheckTimeoutRef].forEach(ref => {
+      if (ref.current) {
+        clearTimeout(ref.current);
+        ref.current = null;
+      }
+    });
     fallbackActiveRef.current = false;
+    speechStateRef.current.boundaryEventsWorking = false;
   }, []);
 
-  // Função para detectar dispositivo móvel de forma mais precisa
-  const isMobileDevice = useCallback(() => {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-           window.innerWidth < 768 || 
-           'ontouchstart' in window ||
-           navigator.maxTouchPoints > 0;
-  }, []);
-
-  // Sistema de fallback aprimorado para sincronização de palavras
-  const createWordSyncSystem = useCallback((words: string[], fromPosition: number, onWordBoundary: (word: string, index: number) => void, utterance: SpeechSynthesisUtterance) => {
+  // Sistema de sincronização de palavras robusto
+  const createAdvancedWordSync = useCallback((
+    words: string[], 
+    fromPosition: number, 
+    onWordBoundary: (word: string, index: number) => void, 
+    utterance: SpeechSynthesisUtterance
+  ) => {
     let currentWordIndex = 0;
     let boundaryEventsDetected = false;
     const isMobile = isMobileDevice();
+    const sessionId = Date.now().toString();
+    sessionIdRef.current = sessionId;
     
-    console.log(`[WordSync] Inicializando sistema para ${words.length} palavras, posição inicial: ${fromPosition}`);
+    console.log(`[WordSync-${sessionId}] Inicializando sistema avançado - Palavras: ${words.length}, Mobile: ${isMobile}`);
 
-    // Fallback timer system - mais preciso e adaptativo
-    const startFallbackTimer = () => {
-      if (fallbackActiveRef.current) return;
+    // Sistema de fallback adaptativo e inteligente
+    const createIntelligentFallback = () => {
+      if (fallbackActiveRef.current || sessionIdRef.current !== sessionId) return;
       
       fallbackActiveRef.current = true;
-      console.log("[WordSync] Iniciando sistema de fallback timer");
+      console.log(`[WordSync-${sessionId}] Ativando fallback inteligente`);
       
-      // Calcular duração baseada na velocidade e complexidade da palavra
-      const calculateWordDuration = (word: string, rate: number) => {
-        const baseTime = 500; // tempo base em ms
+      const calculateWordDuration = (word: string, rate: number, isLast: boolean) => {
+        const baseTime = 400; // tempo base otimizado
         const rateMultiplier = 1 / Math.max(rate, 0.5);
-        const lengthMultiplier = Math.max(1, word.length / 6);
-        const punctuationMultiplier = /[.!?]/.test(word) ? 1.5 : 1;
+        const lengthMultiplier = Math.max(1, word.length / 5);
+        const punctuationMultiplier = /[.!?;:]/.test(word) ? 1.8 : /[,]/.test(word) ? 1.3 : 1;
+        const lastWordMultiplier = isLast ? 1.5 : 1;
         
-        return baseTime * rateMultiplier * lengthMultiplier * punctuationMultiplier;
+        return baseTime * rateMultiplier * lengthMultiplier * punctuationMultiplier * lastWordMultiplier;
       };
 
-      const processNextWord = () => {
-        if (!speechStateRef.current.isPlaying || speechStateRef.current.isPaused || currentWordIndex >= words.length) {
+      const processWordSequence = () => {
+        if (sessionIdRef.current !== sessionId || !speechStateRef.current.isPlaying || speechStateRef.current.isPaused) {
+          fallbackActiveRef.current = false;
+          return;
+        }
+
+        if (currentWordIndex >= words.length) {
+          console.log(`[WordSync-${sessionId}] Fallback concluído - todas as palavras processadas`);
           fallbackActiveRef.current = false;
           return;
         }
 
         const word = words[currentWordIndex];
         const globalIndex = fromPosition + currentWordIndex;
+        const isLastWord = currentWordIndex === words.length - 1;
         
-        console.log(`[WordSync] Fallback destacando palavra ${globalIndex}: "${word}"`);
+        console.log(`[WordSync-${sessionId}] Fallback destacando palavra ${globalIndex}: "${word}"`);
         
-        // Atualizar posição atual para funcionalidade de pause/resume
+        // Atualizar estados
         setCurrentWordPosition(globalIndex + 1);
         speechStateRef.current.currentWordIndex = globalIndex;
         
-        // Chamar callback de highlight
-        onWordBoundary(word, globalIndex);
+        // Callback de highlight
+        try {
+          onWordBoundary(word, globalIndex);
+        } catch (error) {
+          console.warn(`[WordSync-${sessionId}] Erro no callback de highlight:`, error);
+        }
         
         currentWordIndex++;
         
-        // Agendar próxima palavra
+        // Agendar próxima palavra com duração calculada
         if (currentWordIndex < words.length) {
-          const duration = calculateWordDuration(word, utterance.rate || 0.8);
-          wordTimerRef.current = setTimeout(processNextWord, duration);
+          const duration = calculateWordDuration(word, utterance.rate || 0.85, isLastWord);
+          wordTimerRef.current = setTimeout(processWordSequence, duration);
         } else {
-          console.log("[WordSync] Fallback timer completado");
           fallbackActiveRef.current = false;
         }
       };
 
-      // Iniciar com delay mínimo
-      wordTimerRef.current = setTimeout(processNextWord, 200);
+      // Iniciar com delay adaptativo
+      const initialDelay = isMobile ? 300 : 150;
+      wordTimerRef.current = setTimeout(processWordSequence, initialDelay);
     };
 
     // Sistema de boundary events aprimorado
     const handleBoundaryEvent = (event: SpeechSynthesisEvent) => {
-      if (event.name !== 'word') return;
+      if (event.name !== 'word' || sessionIdRef.current !== sessionId) return;
       
       boundaryEventsDetected = true;
-      lastBoundaryTimeRef.current = Date.now();
+      speechStateRef.current.boundaryEventsWorking = true;
+      speechStateRef.current.lastBoundaryTime = Date.now();
       
-      // Parar fallback se boundary events estão funcionando
+      // Parar fallback se boundary events funcionam
       if (fallbackActiveRef.current) {
-        console.log("[WordSync] Boundary events detectados - parando fallback");
+        console.log(`[WordSync-${sessionId}] Boundary events funcionando - parando fallback`);
         cleanup();
         fallbackActiveRef.current = false;
       }
       
-      // Calcular índice da palavra baseado na posição do caractere
-      const charIndex = event.charIndex;
+      // Calcular índice da palavra com precisão
+      const charIndex = event.charIndex || 0;
       let wordIndex = 0;
       let charCount = 0;
       
       for (let i = 0; i < words.length; i++) {
-        if (charCount <= charIndex && charIndex < charCount + words[i].length) {
+        const wordEndPos = charCount + words[i].length;
+        if (charIndex >= charCount && charIndex < wordEndPos + 1) { // +1 para incluir espaço
           wordIndex = i;
           break;
         }
-        charCount += words[i].length + 1; // +1 para espaço
+        charCount += words[i].length + 1;
       }
       
       const globalWordIndex = fromPosition + wordIndex;
       currentWordIndex = wordIndex + 1;
       
-      console.log(`[WordSync] Boundary event - palavra ${globalWordIndex}: "${words[wordIndex] || ''}"`);
+      console.log(`[WordSync-${sessionId}] Boundary event - palavra ${globalWordIndex}: "${words[wordIndex] || ''}"`);
       
-      // Atualizar posição para resume
+      // Atualizar estados
       setCurrentWordPosition(globalWordIndex + 1);
       speechStateRef.current.currentWordIndex = globalWordIndex;
       
-      onWordBoundary(words[wordIndex] || '', globalWordIndex);
+      // Callback seguro
+      try {
+        onWordBoundary(words[wordIndex] || '', globalWordIndex);
+      } catch (error) {
+        console.warn(`[WordSync-${sessionId}] Erro no callback boundary:`, error);
+      }
     };
 
-    // Verificação de saúde do sistema de boundary events
-    const startBoundaryHealthCheck = () => {
+    // Sistema de monitoramento de saúde
+    const startHealthMonitoring = () => {
       if (isMobile) {
         // Em mobile, usar fallback imediatamente
-        startFallbackTimer();
+        console.log(`[WordSync-${sessionId}] Mobile detectado - usando fallback direto`);
+        createIntelligentFallback();
         return;
       }
 
+      // Desktop: verificar se boundary events funcionam
       boundaryCheckTimeoutRef.current = setTimeout(() => {
-        if (!boundaryEventsDetected && speechStateRef.current.isPlaying) {
-          console.log("[WordSync] Boundary events não funcionando - ativando fallback");
-          startFallbackTimer();
+        if (!boundaryEventsDetected && speechStateRef.current.isPlaying && sessionIdRef.current === sessionId) {
+          console.log(`[WordSync-${sessionId}] Boundary events não detectados - ativando fallback`);
+          createIntelligentFallback();
         }
-      }, 800);
+      }, 1000);
     };
 
     return {
       handleBoundaryEvent,
-      startHealthCheck: startBoundaryHealthCheck,
+      startHealthMonitoring,
       cleanup: () => {
         cleanup();
         boundaryEventsDetected = false;
         currentWordIndex = 0;
+        sessionIdRef.current = "";
       }
     };
   }, [cleanup, isMobileDevice]);
 
-  const playText = useCallback(async (text: string, lang: string = "en-US", fromPosition: number = 0, onWordBoundary?: (word: string, index: number) => void) => {
+  const playText = useCallback(async (
+    text: string, 
+    lang: string = "en-US", 
+    fromPosition: number = 0, 
+    onWordBoundary?: (word: string, index: number) => void
+  ) => {
     if (!('speechSynthesis' in window)) {
-      console.warn("Speech synthesis não suportado");
+      console.warn("[Audio] Speech synthesis não suportado");
       return;
     }
 
-    console.log("[Audio] Iniciando playText:", {
+    const sessionId = Date.now().toString();
+    console.log(`[Audio-${sessionId}] Iniciando playText:`, {
       speaking: speechSynthesis.speaking,
       paused: speechSynthesis.paused,
-      isPlaying,
-      isPaused,
-      fromPosition
+      fromPosition,
+      textLength: text.length
     });
 
-    // Reset estado parado quando iniciando nova reprodução
+    // Reset estados
     setIsStopped(false);
     cleanup();
 
-    // Parar qualquer fala atual e aguardar limpeza completa
+    // Limpeza agressiva do estado anterior
     if (speechSynthesis.speaking) {
       speechSynthesis.cancel();
       
+      // Aguardar limpeza completa com timeout
       let attempts = 0;
-      const maxAttempts = 50; // 5 segundos máximo
+      const maxAttempts = 30;
       while (speechSynthesis.speaking && attempts < maxAttempts) {
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
       }
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      if (speechSynthesis.speaking) {
+        console.warn(`[Audio-${sessionId}] Forçando cancel após ${attempts} tentativas`);
+        speechSynthesis.cancel();
+      }
       
-      console.log("[Audio] Limpeza completa após cancel:", {
-        speaking: speechSynthesis.speaking,
-        attempts
-      });
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
 
-    // Preparar texto e palavras
-    const words = text.split(' ').filter(word => word.trim().length > 0);
+    // Preparar texto
+    const words = text.split(/\s+/).filter(word => word.trim().length > 0);
     const textToPlay = words.slice(fromPosition).join(' ');
     
     if (!textToPlay.trim()) {
-      console.warn("Nenhum texto para reproduzir");
+      console.warn(`[Audio-${sessionId}] Nenhum texto válido para reproduzir`);
       return;
     }
     
-    // Armazenar estado atual
+    // Atualizar estados
     setCurrentWordPosition(fromPosition);
     setCurrentText(text);
     setRemainingText(textToPlay);
 
-    // Criar utterance com configurações otimizadas
+    // Criar utterance otimizada
     const utterance = new SpeechSynthesisUtterance(textToPlay);
     utterance.lang = lang;
-    utterance.rate = 0.85; // Velocidade ligeiramente mais lenta para melhor sincronização
-    utterance.pitch = 0.9;
+    utterance.rate = 0.85; // Velocidade otimizada para sincronização
+    utterance.pitch = 0.95; // Pitch mais natural
     utterance.volume = 1;
     
     setCurrentUtterance(utterance);
 
     // Selecionar voz americana preferencialmente
     const voices = speechSynthesis.getVoices();
-    const americanMaleVoice = voices.find(voice => 
-      voice.lang.includes('en-US') && 
-      (voice.name.toLowerCase().includes('male') || 
-       voice.name.toLowerCase().includes('david') ||
-       voice.name.toLowerCase().includes('mark') ||
-       voice.name.toLowerCase().includes('alex') ||
-       voice.name.toLowerCase().includes('daniel') ||
-       voice.name.toLowerCase().includes('fred') ||
-       voice.name.toLowerCase().includes('paul') ||
-       voice.name.toLowerCase().includes('jorge'))
-    );
-    
-    const americanVoice = voices.find(voice => voice.lang.includes('en-US'));
-    
-    if (americanMaleVoice) {
-      utterance.voice = americanMaleVoice;
-    } else if (americanVoice) {
-      utterance.voice = americanVoice;
+    const selectBestVoice = () => {
+      const americanMaleVoices = voices.filter(voice => 
+        voice.lang.includes('en-US') && 
+        voice.name.toLowerCase().includes('male')
+      );
+      
+      const americanVoices = voices.filter(voice => voice.lang.includes('en-US'));
+      const englishVoices = voices.filter(voice => voice.lang.includes('en'));
+      
+      return americanMaleVoices[0] || americanVoices[0] || englishVoices[0] || voices[0];
+    };
+
+    const selectedVoice = selectBestVoice();
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      console.log(`[Audio-${sessionId}] Voz selecionada:`, selectedVoice.name);
     }
 
-    // Configurar sistema de sincronização se callback fornecido
+    // Configurar sistema de sincronização se necessário
     if (onWordBoundary) {
-      const syncSystem = createWordSyncSystem(words, fromPosition, onWordBoundary, utterance);
+      const syncSystem = createAdvancedWordSync(words, fromPosition, onWordBoundary, utterance);
       
       utterance.onboundary = syncSystem.handleBoundaryEvent;
       
       utterance.onstart = () => {
-        console.log("[Audio] Fala iniciada");
+        console.log(`[Audio-${sessionId}] Fala iniciada`);
         setIsPlaying(true);
         setIsPaused(false);
         speechStateRef.current.isPlaying = true;
         speechStateRef.current.isPaused = false;
         speechStateRef.current.currentWordIndex = fromPosition;
         
-        // Trigger primeira palavra imediatamente
-        if (words.length > 0) {
+        // Trigger primeira palavra
+        try {
           onWordBoundary(words[0] || '', fromPosition);
+        } catch (error) {
+          console.warn(`[Audio-${sessionId}] Erro no callback inicial:`, error);
         }
         
-        // Iniciar sistema de verificação
-        syncSystem.startHealthCheck();
+        // Iniciar monitoramento
+        syncSystem.startHealthMonitoring();
       };
       
       utterance.onend = () => {
-        console.log("[Audio] Fala finalizada");
+        console.log(`[Audio-${sessionId}] Fala finalizada`);
         syncSystem.cleanup();
         setIsPlaying(false);
         setIsPaused(false);
@@ -282,34 +320,27 @@ export function useAudio() {
         setRemainingText("");
         speechStateRef.current.isPlaying = false;
         speechStateRef.current.isPaused = false;
-        
-        // Verificação adicional de limpeza
-        setTimeout(() => {
-          if (speechSynthesis.speaking) {
-            console.warn("[Audio] Speech ainda ativo após onend - forçando cancel");
-            speechSynthesis.cancel();
-          }
-        }, 100);
       };
       
       utterance.onerror = (event) => {
-        console.error("[Audio] Erro na síntese:", event);
-        syncSystem.cleanup();
+        console.log(`[Audio-${sessionId}] Erro na síntese:`, event.error);
         
         if (event.error === 'interrupted') {
-          console.log("[Audio] Interrupção esperada durante pause/resume");
-          return;
+          console.log(`[Audio-${sessionId}] Interrupção esperada durante pause/resume`);
+          return; // Não limpar estados em interrupções esperadas
         }
+        
+        syncSystem.cleanup();
         
         if (event.error === 'canceled') {
-          console.log("[Audio] Fala cancelada");
+          console.log(`[Audio-${sessionId}] Fala cancelada - limpeza suave`);
         } else if (event.error === 'not-allowed') {
-          console.log("[Audio] Fala não permitida - interação do usuário necessária");
-        } else if (event.error === 'network') {
-          console.log("[Audio] Erro de rede na síntese");
-          return; // Não limpar estado completamente em erros de rede
+          console.log(`[Audio-${sessionId}] Permissão negada - interação necessária`);
+        } else {
+          console.warn(`[Audio-${sessionId}] Erro inesperado:`, event.error);
         }
         
+        // Limpar apenas se não for interrupção esperada
         setIsPlaying(false);
         setIsPaused(false);
         setCurrentUtterance(null);
@@ -336,7 +367,6 @@ export function useAudio() {
       };
       
       utterance.onerror = (event) => {
-        console.error("[Audio] Erro na síntese:", event);
         if (event.error !== 'interrupted') {
           setIsPlaying(false);
           setIsPaused(false);
@@ -347,26 +377,20 @@ export function useAudio() {
       };
     }
 
-    // Função para iniciar fala com tratamento de erro
-    const startSpeech = () => {
+    // Iniciar fala com tratamento robusto
+    const startSpeech = async () => {
       try {
-        if (!speechSynthesis) {
-          throw new Error("speechSynthesis não disponível");
+        if (speechSynthesis.speaking) {
+          console.log(`[Audio-${sessionId}] Speech ainda ativo - aguardando...`);
+          speechSynthesis.cancel();
+          await new Promise(resolve => setTimeout(resolve, 300));
         }
         
-        if (speechSynthesis.speaking) {
-          console.log("[Audio] speechSynthesis ocupado, cancelando anterior");
-          speechSynthesis.cancel();
-          setTimeout(() => {
-            if (!speechSynthesis.speaking) {
-              speechSynthesis.speak(utterance);
-            }
-          }, 200);
-        } else {
-          speechSynthesis.speak(utterance);
-        }
+        console.log(`[Audio-${sessionId}] Iniciando reprodução`);
+        speechSynthesis.speak(utterance);
+        
       } catch (error) {
-        console.error("[Audio] Erro ao iniciar síntese:", error);
+        console.error(`[Audio-${sessionId}] Erro crítico ao iniciar:`, error);
         setIsPlaying(false);
         setIsPaused(false);
         setCurrentUtterance(null);
@@ -376,60 +400,47 @@ export function useAudio() {
       }
     };
 
-    // Aguardar carregamento de vozes se necessário
+    // Aguardar vozes se necessário
     if (voices.length === 0) {
-      const voicesChangedHandler = () => {
-        const updatedVoices = speechSynthesis.getVoices();
-        
-        const updatedAmericanMaleVoice = updatedVoices.find(voice => 
-          voice.lang.includes('en-US') && 
-          (voice.name.toLowerCase().includes('male') || 
-           voice.name.toLowerCase().includes('david') ||
-           voice.name.toLowerCase().includes('mark') ||
-           voice.name.toLowerCase().includes('alex') ||
-           voice.name.toLowerCase().includes('daniel') ||
-           voice.name.toLowerCase().includes('fred') ||
-           voice.name.toLowerCase().includes('paul') ||
-           voice.name.toLowerCase().includes('jorge'))
-        );
-        
-        const updatedAmericanVoice = updatedVoices.find(voice => voice.lang.includes('en-US'));
-        
-        if (updatedAmericanMaleVoice) {
-          utterance.voice = updatedAmericanMaleVoice;
-        } else if (updatedAmericanVoice) {
-          utterance.voice = updatedAmericanVoice;
+      const handleVoicesChanged = () => {
+        const updatedVoice = selectBestVoice();
+        if (updatedVoice) {
+          utterance.voice = updatedVoice;
         }
-        
         startSpeech();
-        speechSynthesis.removeEventListener('voiceschanged', voicesChangedHandler);
+        speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
       };
       
-      speechSynthesis.addEventListener('voiceschanged', voicesChangedHandler);
+      speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
       
       cleanupTimeoutRef.current = setTimeout(() => {
-        speechSynthesis.removeEventListener('voiceschanged', voicesChangedHandler);
+        speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
         startSpeech();
-      }, 3000);
+      }, 2000);
     } else {
-      startSpeech();
+      await startSpeech();
     }
-  }, [cleanup, createWordSyncSystem, isPlaying, isPaused]);
+  }, [cleanup, createAdvancedWordSync]);
 
   const pauseAudio = useCallback(() => {
     console.log("[Audio] pauseAudio chamado:", {
       speaking: speechSynthesis.speaking,
       paused: speechSynthesis.paused,
-      isPlaying,
-      isPaused,
       currentWordPosition
     });
     
     if (speechSynthesis.speaking && !speechSynthesis.paused) {
       try {
-        const supportsNativePause = !isMobileDevice();
+        const isMobile = isMobileDevice();
         
-        if (supportsNativePause) {
+        if (isMobile) {
+          console.log("[Audio] Dispositivo móvel - usando cancel com tracking");
+          speechSynthesis.cancel();
+          setIsPaused(true);
+          setIsPlaying(false);
+          speechStateRef.current.isPaused = true;
+          speechStateRef.current.isPlaying = false;
+        } else {
           speechSynthesis.pause();
           
           setTimeout(() => {
@@ -438,113 +449,65 @@ export function useAudio() {
               setIsPlaying(false);
               speechStateRef.current.isPaused = true;
               speechStateRef.current.isPlaying = false;
-              console.log("[Audio] Pause nativo bem-sucedido na posição:", currentWordPosition);
+              console.log("[Audio] Pause nativo bem-sucedido");
             } else {
-              console.log("[Audio] Pause nativo falhou, usando cancel com tracking");
+              console.log("[Audio] Pause falhou - usando fallback");
               speechSynthesis.cancel();
               setIsPaused(true);
               setIsPlaying(false);
               speechStateRef.current.isPaused = true;
               speechStateRef.current.isPlaying = false;
             }
-          }, 150);
-        } else {
-          console.log("[Audio] Dispositivo móvel - usando cancel com tracking");
-          speechSynthesis.cancel();
-          setIsPaused(true);
-          setIsPlaying(false);
-          speechStateRef.current.isPaused = true;
-          speechStateRef.current.isPlaying = false;
+          }, 100);
         }
         
       } catch (error) {
         console.warn("[Audio] Erro ao pausar:", error);
-        try {
-          speechSynthesis.cancel();
-        } catch (cancelError) {
-          console.warn("[Audio] Erro ao cancelar:", cancelError);
-        }
+        speechSynthesis.cancel();
         setIsPaused(true);
         setIsPlaying(false);
         speechStateRef.current.isPaused = true;
         speechStateRef.current.isPlaying = false;
       }
-    } else if (speechSynthesis.speaking && speechSynthesis.paused) {
-      setIsPaused(true);
-      setIsPlaying(false);
-      speechStateRef.current.isPaused = true;
-      speechStateRef.current.isPlaying = false;
-      console.log("[Audio] Já estava pausado");
     }
   }, [currentWordPosition, isMobileDevice]);
 
   const resumeAudio = useCallback(() => {
     console.log("[Audio] resumeAudio chamado:", {
-      paused: speechSynthesis.paused,
-      speaking: speechSynthesis.speaking,
-      pending: speechSynthesis.pending,
-      currentWordPosition,
-      hasUtterance: !!currentUtterance,
       isPaused,
-      isPlaying,
-      isStopped
+      hasUtterance: !!currentUtterance,
+      speaking: speechSynthesis.speaking,
+      paused: speechSynthesis.paused
     });
     
     if (currentUtterance && isPaused && !isStopped) {
       try {
-        if (speechSynthesis.speaking) {
-          if (speechSynthesis.paused) {
-            console.log("[Audio] Resumindo fala pausada...");
-            speechSynthesis.resume();
-            
-            setTimeout(() => {
-              if (speechSynthesis.speaking && !speechSynthesis.paused) {
-                setIsPaused(false);
-                setIsPlaying(true);
-                speechStateRef.current.isPaused = false;
-                speechStateRef.current.isPlaying = true;
-                console.log("[Audio] Resume bem-sucedido da posição:", currentWordPosition);
-              } else {
-                console.warn("[Audio] Resume falhou - fala ainda pausada ou parada");
-              }
-            }, 150);
-            
-            return true;
-          } else {
-            console.log("[Audio] Fala aparenta estar executando - sincronizando estados");
-            setIsPaused(false);
-            setIsPlaying(true);
-            speechStateRef.current.isPaused = false;
-            speechStateRef.current.isPlaying = true;
-            return true;
-          }
+        if (speechSynthesis.speaking && speechSynthesis.paused) {
+          speechSynthesis.resume();
+          
+          setTimeout(() => {
+            if (speechSynthesis.speaking && !speechSynthesis.paused) {
+              setIsPaused(false);
+              setIsPlaying(true);
+              speechStateRef.current.isPaused = false;
+              speechStateRef.current.isPlaying = true;
+              console.log("[Audio] Resume bem-sucedido");
+            }
+          }, 100);
+          
+          return true;
         } else {
-          console.log("[Audio] Fala foi interrompida, precisa reiniciar da posição:", currentWordPosition);
-          setIsPaused(false);
-          setIsPlaying(false);
-          setCurrentUtterance(null);
-          speechStateRef.current.isPaused = false;
-          speechStateRef.current.isPlaying = false;
+          console.log("[Audio] Speech foi interrompido - não é possível resumir");
           return false;
         }
       } catch (error) {
-        console.error("[Audio] Erro no resumeAudio:", error);
-        setIsPaused(false);
-        setIsPlaying(false);
-        speechStateRef.current.isPaused = false;
-        speechStateRef.current.isPlaying = false;
+        console.error("[Audio] Erro no resume:", error);
         return false;
       }
-    } else {
-      console.warn("[Audio] Não é possível resumir - estado inválido:", {
-        hasUtterance: !!currentUtterance,
-        isPaused,
-        isPlaying,
-        isStopped
-      });
-      return false;
     }
-  }, [currentUtterance, isPaused, isPlaying, currentWordPosition, isStopped]);
+    
+    return false;
+  }, [currentUtterance, isPaused, isStopped]);
 
   const stopAudio = useCallback(() => {
     console.log("[Audio] stopAudio chamado - reset completo");

@@ -79,10 +79,15 @@ export default function ReadingLesson({
   }, [playText, isSupported]);
 
   const startGuidedReading = useCallback((fromPosition: number = 0) => {
-    // Use the useAudio hook with perfect word boundary synchronization
+    console.log(`[ReadingLesson] Iniciando leitura guiada da posição ${fromPosition}`);
+    
     playText(text, 'en-US', fromPosition, (word: string, wordIndex: number) => {
-      // Only highlight if speech is actually playing (not paused)
-      if (speechSynthesis.speaking && !speechSynthesis.paused) {
+      // Verificação mais robusta do estado de reprodução
+      const isActivelySpeaking = speechSynthesis.speaking && !speechSynthesis.paused;
+      const shouldHighlight = isActivelySpeaking || !speechSynthesis.speaking; // Permite highlight mesmo quando speech acabou
+      
+      if (shouldHighlight) {
+        console.log(`[ReadingLesson] Destacando palavra ${wordIndex}: "${word}"`);
         setCurrentWordIndex(wordIndex);
         setCompletedWords(prev => new Set(prev).add(wordIndex));
       }
@@ -91,17 +96,27 @@ export default function ReadingLesson({
 
 
   const handlePlayPause = useCallback(() => {
+    console.log(`[ReadingLesson] handlePlayPause - Estado atual:`, {
+      isPlaying, isPaused, isStopped, currentWordPosition, readingMode
+    });
+
     if (isPlaying) {
-      // Pause current playback
+      // Pausar reprodução atual
+      console.log(`[ReadingLesson] Pausando reprodução`);
       pauseAudio();
       setIsPlaying(false);
-      // Clear current word highlighting when paused
-      setCurrentWordIndex(-1);
+      // Manter highlighting da palavra atual durante pausa
+      // setCurrentWordIndex(-1); // Removido para manter contexto visual
     } else if (isPaused && !isStopped) {
-      // Resume from where we paused
+      // Tentar resumir da posição pausada
+      console.log(`[ReadingLesson] Tentando resumir da posição ${currentWordPosition}`);
       const resumed = resumeAudio();
+      
       if (!resumed) {
-        // If resume failed, restart from current position
+        // Se resume falhou, reiniciar da posição atual
+        console.log(`[ReadingLesson] Resume falhou - reiniciando da posição ${currentWordPosition}`);
+        setCurrentWordIndex(currentWordPosition);
+        
         if (readingMode === 'guided') {
           startGuidedReading(currentWordPosition);
         } else {
@@ -110,9 +125,11 @@ export default function ReadingLesson({
       }
       setIsPlaying(true);
     } else {
-      // Start from beginning or current position
+      // Iniciar do começo ou posição atual
+      const startPosition = isStopped ? 0 : Math.max(0, currentWordPosition);
+      console.log(`[ReadingLesson] Iniciando nova reprodução da posição ${startPosition}`);
+      
       setIsPlaying(true);
-      const startPosition = isStopped ? 0 : currentWordPosition;
       setCurrentWordIndex(startPosition);
 
       if (readingMode === 'guided') {
@@ -166,17 +183,7 @@ export default function ReadingLesson({
     setIsPlaying(audioIsPlaying);
   }, [audioIsPlaying]);
 
-  // Monitor speech synthesis pause state and clear highlighting when paused
-  useEffect(() => {
-    const checkPauseState = () => {
-      if (speechSynthesis.paused && speechSynthesis.speaking) {
-        setCurrentWordIndex(-1); // Clear highlighting when paused
-      }
-    };
-
-    const interval = setInterval(checkPauseState, 100);
-    return () => clearInterval(interval);
-  }, []);
+  // Removido monitoramento de pause state para evitar interferência com highlighting
 
   // Separate effect for completion check to avoid dependency loop
   useEffect(() => {
