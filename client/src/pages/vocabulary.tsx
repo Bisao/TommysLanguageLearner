@@ -20,7 +20,7 @@ export default function Vocabulary() {
     queryKey: ["/api/lessons"],
   });
 
-  const vocabularyLessons = lessons.filter((l: any) => l.category === "vocabulary");
+  const vocabularyLessons = (lessons as any[]).filter((l: any) => l.category === "vocabulary");
 
   const openLesson = (lessonId: number) => {
     setSelectedLesson(lessonId);
@@ -38,17 +38,17 @@ export default function Vocabulary() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
+          className="text-center mb-6 sm:mb-8"
         >
-          <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-4">
+          <h1 className="heading-responsive font-bold gradient-text mb-3 sm:mb-4">
             Vocabulário
           </h1>
-          <p className="text-lg text-muted-foreground">
+          <p className="text-responsive text-muted-foreground px-4">
             Aprenda novas palavras e expanda seu vocabulário
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="responsive-grid">
           {vocabularyLessons.map((lesson: any, index: number) => (
             <motion.div
               key={lesson.id}
@@ -57,24 +57,24 @@ export default function Vocabulary() {
               transition={{ delay: index * 0.1 }}
             >
               <Card 
-                className="cartoon-card group cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                className="card-interactive touch-friendly"
                 onClick={() => openLesson(lesson.id)}
               >
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center">
+                <CardContent className="mobile-card-compact sm:p-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 space-y-3 sm:space-y-0">
+                    <div className="flex items-center space-x-3 min-w-0 flex-1">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
                         {lesson.completed ? (
-                          <CheckCircle className="text-white" size={24} />
+                          <CheckCircle className="text-white" size={20} />
                         ) : lesson.locked ? (
-                          <Lock className="text-white" size={24} />
+                          <Lock className="text-white" size={20} />
                         ) : (
-                          <BookOpen className="text-white" size={24} />
+                          <BookOpen className="text-white" size={20} />
                         )}
                       </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-cartoon-dark">{lesson.title}</h3>
-                        <p className="text-sm text-muted-foreground">{lesson.description}</p>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-responsive font-bold text-gray-800 dark:text-white truncate">{lesson.title}</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{lesson.description}</p>
                       </div>
                     </div>
                   </div>
