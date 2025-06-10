@@ -114,7 +114,7 @@ export default function ReadingLesson({
       setIsPlaying(true);
       const startPosition = isStopped ? 0 : currentWordPosition;
       setCurrentWordIndex(startPosition);
-      
+
       if (readingMode === 'guided') {
         startGuidedReading(startPosition);
       } else {
@@ -123,7 +123,7 @@ export default function ReadingLesson({
     }
   }, [isPlaying, isPaused, isStopped, readingMode, text, playText, pauseAudio, resumeAudio, startGuidedReading, currentWordPosition]);
 
-  
+
 
   const handleMicrophoneToggle = useCallback(() => {
     if (isListening) {
@@ -403,43 +403,42 @@ export default function ReadingLesson({
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
-              {allWords.map((word: string, index: number) => {
-                const isCurrentWord = currentWordIndex === index;
-                const isCompleted = completedWords.has(index);
+              {paragraphs.map((paragraph, pIndex) => (
+                <p key={`paragraph-${pIndex}`} className="leading-relaxed">
+                  {paragraph.split(' ').map((word, wordIndex) => {
+                  // Calcular índice global de forma mais precisa
+                  let globalIndex = 0;
+                  for (let i = 0; i < pIndex; i++) {
+                    globalIndex += paragraphs[i].split(' ').filter(w => w.trim().length > 0).length;
+                  }
+                  globalIndex += wordIndex;
 
-                return (
-                  <motion.span
-                    key={index}
-                    onClick={() => handleWordClick(word, index)}
-                    className={`
-                      text-word-highlight inline-block mx-0.5 sm:mx-1 my-0.5 sm:my-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md cursor-pointer
-                      transition-all duration-300 hover:bg-blue-100 hover:scale-105
-                      ${isCurrentWord ? 'text-word-current bg-blue-500 text-white shadow-lg' : ''}
-                      ${isCompleted ? 'bg-green-100 text-green-800' : ''}
-                      ${!isCompleted && !isCurrentWord ? 'hover:bg-gray-100' : ''}
-                    `}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.01 }}
-                  >
-                    {word}
-                    {isCompleted && (
-                      <CheckCircle2 className="w-3 h-3 text-green-600 inline ml-1" />
-                    )}
-                    {isCurrentWord && (
-                      <motion.div
-                        className="floating-audio-icon inline ml-1"
-                        animate={{ scale: [1, 1.2, 1] }}
-                        transition={{ repeat: Infinity, duration: 1 }}
-                      >
-                        <Volume2 className="w-3 h-3 text-white" />
-                      </motion.div>
-                    )}
-                  </motion.span>
-                );
-              })}
+                  const isCurrentWord = globalIndex === currentWordIndex;
+                  const isCompleted = completedWords.has(globalIndex);
+
+                  return (
+                    <span
+                      key={`${pIndex}-${wordIndex}-${globalIndex}`}
+                      data-word-index={globalIndex}
+                      className={`
+                        inline-block mx-0.5 sm:mx-1 my-0.5 sm:my-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md cursor-pointer
+                        transition-all duration-300 hover:scale-105
+                        ${isCurrentWord 
+                          ? 'text-word-current bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 z-10' 
+                          : isCompleted 
+                          ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-medium' 
+                          : 'hover:bg-gray-100 hover:shadow-md'
+                        }
+                      `}
+                      onClick={() => handleWordClick(word, globalIndex)}
+                      title={`Palavra ${globalIndex + 1}: ${word}`}
+                    >
+                      {word}
+                    </span>
+                  );
+                })}
+                </p>
+              ))}
             </motion.div>
 
             {/* Speech Recognition Feedback */}
