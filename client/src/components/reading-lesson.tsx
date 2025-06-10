@@ -195,32 +195,33 @@ export default function ReadingLesson({
       console.log(`[ReadingLesson] Pausando reprodução`);
       pauseAudio();
       setIsPlaying(false);
-      // Manter highlighting da palavra atual durante pausa
-      // setCurrentWordIndex(-1); // Removido para manter contexto visual
-    } else if (isPaused && !isStopped) {
-      // Tentar resumir da posição pausada
+    } else if (isPaused && !isStopped && readingMode === 'guided') {
+      // Em modo guiado, tentar resumir sem restart automático
       console.log(`[ReadingLesson] Tentando resumir da posição ${currentWordPosition}`);
       const resumed = resumeAudio();
       
-      if (!resumed) {
-        // Se resume falhou, reiniciar da posição atual
-        console.log(`[ReadingLesson] Resume falhou - reiniciando da posição ${currentWordPosition}`);
-        setCurrentWordIndex(currentWordPosition);
-        
-        startGuidedReading(currentWordPosition);
+      if (resumed) {
+        setIsPlaying(true);
+      } else {
+        // Se resume falhou, continuar da posição atual sem restart automático
+        console.log(`[ReadingLesson] Resume falhou - continuando da posição ${currentWordPosition}`);
+        setCurrentWordIndex(Math.max(0, currentWordPosition));
+        startGuidedReading(Math.max(0, currentWordPosition));
+        setIsPlaying(true);
       }
-      setIsPlaying(true);
     } else {
       // Iniciar do começo ou posição atual
-      const startPosition = isStopped ? 0 : Math.max(0, currentWordPosition);
+      const startPosition = isStopped ? 0 : Math.max(0, currentWordIndex);
       console.log(`[ReadingLesson] Iniciando nova reprodução da posição ${startPosition}`);
       
       setIsPlaying(true);
       setCurrentWordIndex(startPosition);
 
-      startGuidedReading(startPosition);
+      if (readingMode === 'guided') {
+        startGuidedReading(startPosition);
+      }
     }
-  }, [isPlaying, isPaused, isStopped, readingMode, text, playText, pauseAudio, resumeAudio, startGuidedReading, currentWordPosition]);
+  }, [isPlaying, isPaused, isStopped, readingMode, text, playText, pauseAudio, resumeAudio, startGuidedReading, currentWordPosition, currentWordIndex]);
 
 
 
@@ -281,14 +282,14 @@ export default function ReadingLesson({
 
   // Detect when audio reading is finished
   useEffect(() => {
-    if (!audioIsPlaying && !isPaused && currentWordIndex >= totalWords - 1 && !isStopped) {
-      // Audio finished reading all words
+    if (!audioIsPlaying && !isPaused && currentWordIndex >= totalWords - 1 && !isStopped && readingMode === 'guided') {
+      // Audio finished reading all words in guided mode
       setAudioFinished(true);
       setTimeout(() => {
         setShowCompletionMessage(true);
       }, 1000); // Show message 1 second after audio finishes
     }
-  }, [audioIsPlaying, isPaused, currentWordIndex, totalWords, isStopped]);
+  }, [audioIsPlaying, isPaused, currentWordIndex, totalWords, isStopped, readingMode]);
 
   // Removido monitoramento de pause state para evitar interferência com highlighting
 
