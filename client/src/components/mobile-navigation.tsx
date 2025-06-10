@@ -55,32 +55,32 @@ export default function MobileNavigation({ user }: MobileNavigationProps) {
           </Button>
         </SheetTrigger>
         
-        <SheetContent side="left" className="w-80 bg-white dark:bg-gray-900 p-0">
+        <SheetContent side="left" className="w-80 bg-white dark:bg-gray-900 p-0 custom-scrollbar">
           <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold gradient-text">Menu</h2>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsOpen(false)}
-                  className="p-2"
+                  className="touch-friendly"
                 >
                   <X size={18} />
                 </Button>
               </div>
               
               {user && (
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-lg p-4">
+                <div className="glass-card p-4 mx-1">
                   <div className="flex items-center space-x-3 mb-3">
-                    <div className="w-10 h-10 bg-cartoon-blue rounded-full flex items-center justify-center">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center avatar-ring">
                       <span className="text-white font-bold text-sm">
                         {user.username.charAt(0).toUpperCase()}
                       </span>
                     </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 dark:text-white truncate">
                         {user.username}
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-300">

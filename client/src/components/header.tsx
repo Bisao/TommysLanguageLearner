@@ -73,71 +73,70 @@ export default function Header({ user, audioControls, showAudioControls, isReadi
 
   return (
     <header className="w-full h-16 sm:h-20 lg:h-24">
-      <div className="h-full px-4 sm:px-6 lg:px-8">
+      <div className="h-full container-responsive">
         <div className="flex justify-between items-center h-full">
-          {/* Mobile Navigation Menu */}
-          <div className="flex items-center space-x-2">
+          {/* Mobile Navigation & Logo Section */}
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
             <MobileNavigation user={user} />
             
             {/* Logo Section / Reading Lesson Navigation */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               {isReadingPage ? (
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center min-w-0 flex-1"
-            >
-              <Button 
-                onClick={onGoBack}
-                variant="ghost" 
-                size="sm"
-                className="flex items-center gap-1 sm:gap-2 text-gray-600 hover:text-gray-800 hover:bg-white/50 transition-all duration-200 shrink-0"
-              >
-                <ArrowLeft size={14} className="sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Voltar</span>
-                <span className="sm:hidden">←</span>
-              </Button>
-              
-              <div className="flex-1 text-center mx-2 min-w-0">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="space-y-1"
+                <motion.div 
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="flex items-center min-w-0 flex-1"
                 >
-                  <h1 className="text-sm sm:text-lg lg:text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent truncate">
-                    Lição de Leitura
-                  </h1>
-                  <div className="hidden lg:flex flex-wrap justify-center gap-2">
-                    <Badge className="bg-green-100 text-green-700 border border-green-200 text-xs">
-                      <BookOpen className="w-3 h-3 mr-1" />
-                      {lessonTitle || "How Will We Eat in 2021?"}
-                    </Badge>
-                    <Badge className="bg-blue-100 text-blue-700 border border-blue-200 text-xs">
-                      <Clock className="w-3 h-3 mr-1" />
-                      15-20 min
-                    </Badge>
-                  </div>
-                  <div className="lg:hidden">
-                    <Badge className="bg-blue-100 text-blue-700 border border-blue-200 text-xs">
-                      <Clock className="w-3 h-3 mr-1" />
-                      15 min
-                    </Badge>
+                  <Button 
+                    onClick={onGoBack}
+                    variant="ghost" 
+                    size="sm"
+                    className="touch-friendly text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-700/50 smooth-transition shrink-0"
+                  >
+                    <ArrowLeft size={16} className="sm:w-4 sm:h-4" />
+                    <span className="hidden sm:inline ml-1">Voltar</span>
+                  </Button>
+                  
+                  <div className="flex-1 text-center mx-2 min-w-0">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.2 }}
+                      className="space-y-1"
+                    >
+                      <h1 className="text-sm sm:text-base lg:text-lg font-bold gradient-text truncate">
+                        Lição de Leitura
+                      </h1>
+                      <div className="hidden lg:flex flex-wrap justify-center gap-2">
+                        <Badge className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700 text-xs">
+                          <BookOpen className="w-3 h-3 mr-1" />
+                          {lessonTitle || "How Will We Eat in 2021?"}
+                        </Badge>
+                        <Badge className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 text-xs">
+                          <Clock className="w-3 h-3 mr-1" />
+                          15-20 min
+                        </Badge>
+                      </div>
+                      <div className="lg:hidden">
+                        <Badge className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 text-xs">
+                          <Clock className="w-3 h-3 mr-1" />
+                          15 min
+                        </Badge>
+                      </div>
+                    </motion.div>
                   </div>
                 </motion.div>
-              </div>
-            </motion.div>
               ) : (
                 <motion.div 
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center space-x-2 cursor-pointer"
+                  className="flex items-center space-x-2 sm:space-x-3 cursor-pointer touch-friendly"
                   onClick={() => setLocation("/home")}
                 >
                   <img 
                     src={tommyLogoPath} 
                     alt="Tommy's Academy Logo" 
-                    className="w-7 h-7 sm:w-9 sm:h-9 lg:w-10 lg:h-10 object-contain"
+                    className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 object-contain"
                   />
                   <div className="hidden sm:block">
                     <h1 className="text-base sm:text-lg lg:text-xl font-bold gradient-text">Tommy's Academy</h1>

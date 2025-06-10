@@ -88,15 +88,17 @@ export default function Home() {
 
   return (
     <Layout user={user as any}>
-      <div className="space-y-6">
-        {/* Welcome Section */}
+      <div className="space-y-6 sm:space-y-8 lg:space-y-10">
+        {/* Welcome Section - Enhanced */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
         >
-          <div className="inline-block mb-4 floating-card">
-            <Mascot />
+          <div className="inline-block mb-4 sm:mb-6">
+            <div className="floating-card p-4 sm:p-6">
+              <Mascot />
+            </div>
           </div>
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text mb-3 px-4">
             Olá {(user as any)?.username}! Vamos aprender inglês hoje?
@@ -150,72 +152,74 @@ export default function Home() {
           </Card>
         </motion.div>
 
-        {/* Quick Access Grid */}
+        {/* Quick Access Grid - Enhanced */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8"
+          className="responsive-grid mb-6 sm:mb-8"
         >
-          <Card className="cartoon-card group cursor-pointer transition-all duration-300 hover:scale-105" onClick={() => setLocation("/lessons")}>
-            <CardContent className="p-4 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-blue-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+          <Card className="card-interactive touch-friendly" onClick={() => setLocation("/lessons")}>
+            <CardContent className="mobile-card-compact sm:p-6 text-center">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 smooth-transition shadow-lg">
                 <BookOpen className="text-white" size={20} />
               </div>
-              <h4 className="font-semibold text-sm mb-1">Aulas</h4>
-              <p className="text-xs text-muted-foreground">Lições estruturadas</p>
+              <h4 className="font-semibold text-responsive mb-1 text-gray-800 dark:text-white">Aulas</h4>
+              <p className="text-xs sm:text-sm text-muted-foreground">Lições estruturadas</p>
             </CardContent>
           </Card>
 
-          <Card className="cartoon-card group cursor-pointer transition-all duration-300 hover:scale-105" onClick={() => setLocation("/exercises")}>
-            <CardContent className="p-4 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-orange-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+          <Card className="card-interactive touch-friendly" onClick={() => setLocation("/exercises")}>
+            <CardContent className="mobile-card-compact sm:p-6 text-center">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center group-hover:scale-110 smooth-transition shadow-lg">
                 <Target className="text-white" size={20} />
               </div>
-              <h4 className="font-semibold text-sm mb-1">Exercícios</h4>
-              <p className="text-xs text-muted-foreground">Prática dirigida</p>
+              <h4 className="font-semibold text-responsive mb-1 text-gray-800 dark:text-white">Exercícios</h4>
+              <p className="text-xs sm:text-sm text-muted-foreground">Prática dirigida</p>
             </CardContent>
           </Card>
 
-          <Card className="cartoon-card group cursor-pointer transition-all duration-300 hover:scale-105" onClick={() => setLocation("/profile")}>
-            <CardContent className="p-4 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-purple-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+          <Card className="card-interactive touch-friendly" onClick={() => setLocation("/profile")}>
+            <CardContent className="mobile-card-compact sm:p-6 text-center">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center group-hover:scale-110 smooth-transition shadow-lg">
                 <Trophy className="text-white" size={20} />
               </div>
-              <h4 className="font-semibold text-sm mb-1">Conquistas</h4>
-              <p className="text-xs text-muted-foreground">Seu progresso</p>
+              <h4 className="font-semibold text-responsive mb-1 text-gray-800 dark:text-white">Conquistas</h4>
+              <p className="text-xs sm:text-sm text-muted-foreground">Seu progresso</p>
             </CardContent>
           </Card>
 
-          <Card className="cartoon-card group cursor-pointer transition-all duration-300 hover:scale-105" onClick={() => setLocation("/reference")}>
-            <CardContent className="p-4 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-green-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+          <Card className="card-interactive touch-friendly" onClick={() => setLocation("/reference")}>
+            <CardContent className="mobile-card-compact sm:p-6 text-center">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto mb-3 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center group-hover:scale-110 smooth-transition shadow-lg">
                 <BookOpen className="text-white" size={20} />
               </div>
-              <h4 className="font-semibold text-sm mb-1">Referência</h4>
-              <p className="text-xs text-muted-foreground">Material de apoio</p>
+              <h4 className="font-semibold text-responsive mb-1 text-gray-800 dark:text-white">Referência</h4>
+              <p className="text-xs sm:text-sm text-muted-foreground">Material de apoio</p>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* Study Categories Section */}
+        {/* Study Categories Section - Enhanced */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="mb-8"
+          className="mb-6 sm:mb-8"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold text-cartoon-dark flex items-center">
-              <BookOpen className="text-cartoon-blue mr-3" size={24} />
-              Categorias de Estudo
+          <div className="responsive-flex justify-between items-center mb-4 sm:mb-6">
+            <h3 className="heading-responsive font-bold text-gray-800 dark:text-white flex items-center">
+              <BookOpen className="text-blue-500 mr-2 sm:mr-3" size={20} />
+              <span className="hidden sm:inline">Categorias de Estudo</span>
+              <span className="sm:hidden">Categorias</span>
             </h3>
-            <Button variant="outline" onClick={() => setLocation("/lessons")} className="text-sm">
-              Ver Todas
+            <Button variant="outline" onClick={() => setLocation("/lessons")} className="text-xs sm:text-sm touch-friendly">
+              <span className="hidden sm:inline">Ver Todas</span>
+              <span className="sm:hidden">Ver</span>
             </Button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {categories.map((category, index) => {
               const Icon = category.icon;
               const completedLessons = category.lessons.filter((l: any) => l.completed).length;
@@ -228,27 +232,27 @@ export default function Home() {
                   initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.6 + index * 0.1 }}
-                  className="cartoon-card group cursor-pointer hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                  className="card-interactive touch-friendly"
                   onClick={() => setLocation(category.path)}
                 >
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center space-x-4">
-                        <div className={`w-14 h-14 bg-gradient-to-br ${
+                  <CardContent className="mobile-card-compact sm:p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-4 space-y-3 sm:space-y-0">
+                      <div className="flex items-center space-x-3 sm:space-x-4">
+                        <div className={`w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br ${
                           category.color === 'cartoon-coral' ? 'from-pink-400 to-red-500' :
                           category.color === 'cartoon-blue' ? 'from-blue-400 to-purple-500' :
                           category.color === 'cartoon-mint' ? 'from-green-400 to-teal-500' :
                           'from-yellow-400 to-orange-500'
-                        } rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
-                          <Icon className="text-white" size={24} />
+                        } rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 smooth-transition`}>
+                          <Icon className="text-white" size={20} />
                         </div>
-                        <div>
-                          <h4 className="text-xl font-bold text-cartoon-dark mb-1">{category.name}</h4>
-                          <p className="text-sm text-muted-foreground">{category.description}</p>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-responsive font-bold text-gray-800 dark:text-white mb-1 truncate">{category.name}</h4>
+                          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{category.description}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-cartoon-dark">{Math.round(progressPercent)}%</div>
+                      <div className="text-center sm:text-right flex-shrink-0">
+                        <div className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">{Math.round(progressPercent)}%</div>
                         <div className="text-xs text-muted-foreground">completo</div>
                       </div>
                     </div>
