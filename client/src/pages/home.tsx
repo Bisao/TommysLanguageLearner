@@ -111,29 +111,28 @@ export default function Home() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mb-8"
+          transition={{ delay: 0.2 }}
+          className="mb-6"
         >
-          <Card className="cartoon-card border-cartoon-mint relative overflow-hidden">
-            <CardContent className="p-6">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-l from-green-200/30 to-transparent rounded-full transform translate-x-16 -translate-y-16"></div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-cartoon-mint rounded-full flex items-center justify-center">
-                    <Zap className="text-white" size={24} />
+          <Card className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border-green-200 dark:border-green-700">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center space-x-3 min-w-0 flex-1">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500 rounded-full flex items-center justify-center shrink-0">
+                    <Zap className="text-white" size={20} />
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-cartoon-dark">Continue de onde parou</h3>
-                    <p className="text-muted-foreground">
+                  <div className="min-w-0">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">Continue de onde parou</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
                       {(() => {
                         const nextLesson = (lessons as any[]).find((l: any) => !l.completed);
-                        return nextLesson ? `Próxima lição: ${nextLesson.title}` : "Parabéns! Você completou todas as lições disponíveis";
+                        return nextLesson ? `Próxima: ${nextLesson.title}` : "Todas as lições concluídas";
                       })()}
                     </p>
                   </div>
                 </div>
                 <Button 
-                  className="cartoon-button flex items-center space-x-2"
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shrink-0"
                   onClick={() => {
                     const nextLesson = (lessons as any[]).find((l: any) => !l.completed);
                     if (nextLesson) {
@@ -143,7 +142,8 @@ export default function Home() {
                   disabled={!(lessons as any[]).find((l: any) => !l.completed)}
                 >
                   <Brain size={16} />
-                  <span>Continuar</span>
+                  <span className="hidden sm:inline">Continuar</span>
+                  <span className="sm:hidden">Ir</span>
                 </Button>
               </div>
             </CardContent>
@@ -154,46 +154,46 @@ export default function Home() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+          transition={{ delay: 0.3 }}
+          className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6"
         >
-          <Card className="cartoon-card group cursor-pointer transition-all duration-300 hover:scale-105" onClick={() => setLocation("/lessons")}>
-            <CardContent className="p-4 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-blue-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                <BookOpen className="text-white" size={20} />
+          <Card className="bg-white dark:bg-gray-800 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer touch-target" onClick={() => setLocation("/lessons")}>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 bg-blue-500 rounded-full flex items-center justify-center">
+                <BookOpen className="text-white" size={16} />
               </div>
-              <h4 className="font-semibold text-sm mb-1">Aulas</h4>
-              <p className="text-xs text-muted-foreground">Lições estruturadas</p>
+              <h4 className="font-semibold text-xs sm:text-sm mb-1">Aulas</h4>
+              <p className="text-xs text-muted-foreground hidden sm:block">Lições estruturadas</p>
             </CardContent>
           </Card>
 
-          <Card className="cartoon-card group cursor-pointer transition-all duration-300 hover:scale-105" onClick={() => setLocation("/exercises")}>
-            <CardContent className="p-4 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-orange-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Target className="text-white" size={20} />
+          <Card className="bg-white dark:bg-gray-800 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer touch-target" onClick={() => setLocation("/exercises")}>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 bg-orange-500 rounded-full flex items-center justify-center">
+                <Target className="text-white" size={16} />
               </div>
-              <h4 className="font-semibold text-sm mb-1">Exercícios</h4>
-              <p className="text-xs text-muted-foreground">Prática dirigida</p>
+              <h4 className="font-semibold text-xs sm:text-sm mb-1">Exercícios</h4>
+              <p className="text-xs text-muted-foreground hidden sm:block">Prática dirigida</p>
             </CardContent>
           </Card>
 
-          <Card className="cartoon-card group cursor-pointer transition-all duration-300 hover:scale-105" onClick={() => setLocation("/profile")}>
-            <CardContent className="p-4 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-purple-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Trophy className="text-white" size={20} />
+          <Card className="bg-white dark:bg-gray-800 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer touch-target" onClick={() => setLocation("/profile")}>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 bg-purple-500 rounded-full flex items-center justify-center">
+                <Trophy className="text-white" size={16} />
               </div>
-              <h4 className="font-semibold text-sm mb-1">Conquistas</h4>
-              <p className="text-xs text-muted-foreground">Seu progresso</p>
+              <h4 className="font-semibold text-xs sm:text-sm mb-1">Conquistas</h4>
+              <p className="text-xs text-muted-foreground hidden sm:block">Seu progresso</p>
             </CardContent>
           </Card>
 
-          <Card className="cartoon-card group cursor-pointer transition-all duration-300 hover:scale-105" onClick={() => setLocation("/reference")}>
-            <CardContent className="p-4 text-center">
-              <div className="w-12 h-12 mx-auto mb-3 bg-green-500 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                <BookOpen className="text-white" size={20} />
+          <Card className="bg-white dark:bg-gray-800 hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer touch-target" onClick={() => setLocation("/reading")}>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 bg-green-500 rounded-full flex items-center justify-center">
+                <BookOpen className="text-white" size={16} />
               </div>
-              <h4 className="font-semibold text-sm mb-1">Referência</h4>
-              <p className="text-xs text-muted-foreground">Material de apoio</p>
+              <h4 className="font-semibold text-xs sm:text-sm mb-1">Leitura</h4>
+              <p className="text-xs text-muted-foreground hidden sm:block">Textos interativos</p>
             </CardContent>
           </Card>
         </motion.div>
