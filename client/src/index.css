@@ -497,6 +497,85 @@ html,
     transform: scale(1.1);
     box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
   }
+
+
+/* Sistema de Prática de Pronúncia */
+.pronunciation-correct {
+  animation: correctPronunciation 0.6s ease-in-out;
+}
+
+.pronunciation-close {
+  animation: closePronunciation 0.6s ease-in-out;
+}
+
+.pronunciation-incorrect {
+  animation: incorrectPronunciation 0.6s ease-in-out;
+}
+
+@keyframes correctPronunciation {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); box-shadow: 0 0 20px rgba(34, 197, 94, 0.6); }
+  100% { transform: scale(1); }
+}
+
+@keyframes closePronunciation {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); box-shadow: 0 0 15px rgba(245, 158, 11, 0.6); }
+  100% { transform: scale(1); }
+}
+
+@keyframes incorrectPronunciation {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+  100% { transform: translateX(0); }
+}
+
+/* Feedback visual para microfone ativo */
+.microphone-active {
+  animation: microphonePulse 2s infinite;
+}
+
+@keyframes microphonePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Melhorias no highlight de palavras */
+.word-highlight-practice {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.word-highlight-practice::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.word-highlight-practice.active::after {
+  transform: scaleX(1);
+}
+
+/* Confiança do reconhecimento */
+.confidence-high {
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+}
+
+.confidence-medium {
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+}
+
+.confidence-low {
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+}
+
 }
 
 .gradient-text-reading {

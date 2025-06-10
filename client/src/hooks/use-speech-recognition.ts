@@ -70,17 +70,18 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     
-    // Configurações otimizadas para mobile e desktop
+    // Configurações otimizadas para análise de pronúncia
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
-    recognition.maxAlternatives = 1;
+    recognition.maxAlternatives = 3; // Múltiplas alternativas para melhor análise
     
     // Configurações específicas para mobile
     if (isMobile) {
-      // No mobile, usar configurações mais conservadoras
-      recognition.continuous = false; // Evitar problemas de timeout
-      recognition.interimResults = false; // Reduzir overhead no mobile
+      // No mobile, manter configurações para análise de pronúncia
+      recognition.continuous = true; // Manter contínuo para prática
+      recognition.interimResults = true; // Necessário para feedback em tempo real
+      recognition.maxAlternatives = 1; // Reduzir overhead no mobile
     }
 
     let finalTranscriptAccumulator = transcript;
@@ -103,37 +104,34 @@ export function useSpeechRecognition(): SpeechRecognitionHook {
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
-        const resultTranscript = result[0].transcript;
-        const resultConfidence = result[0].confidence || 0;
+        const resultTranscript = result[0].transcript.trim();
+        const resultConfidence = result[0].confidence || 0.8; // Default confidence para melhor UX
 
         if (result.isFinal) {
-          finalTranscriptResult += resultTranscript;
+          finalTranscriptResult += (finalTranscriptResult ? ' ' : '') + resultTranscript;
           maxConfidence = Math.max(maxConfidence, resultConfidence);
-          console.log("Final result:", resultTranscript, "Confidence:", resultConfidence);
+          console.log("[SpeechRecognition] Final result:", resultTranscript, "Confidence:", resultConfidence);
         } else {
-          interimTranscriptResult += resultTranscript;
+          interimTranscriptResult += (interimTranscriptResult ? ' ' : '') + resultTranscript;
         }
       }
 
+      // Atualizar transcript imediatamente para análise em tempo real
       if (finalTranscriptResult) {
-        finalTranscriptAccumulator += finalTranscriptResult;
+        finalTranscriptAccumulator += (finalTranscriptAccumulator ? ' ' : '') + finalTranscriptResult;
         setTranscript(finalTranscriptAccumulator);
         setConfidence(maxConfidence);
         lastActivityTime = Date.now();
         
-        // No mobile, reiniciar automaticamente após receber resultado final
-        if (isMobile && !isRestartingRef.current) {
-          console.log("Mobile: Restarting recognition after final result");
-          isRestartingRef.current = true;
-          restartTimeoutRef.current = setTimeout(() => {
-            if (isListening) {
-              startListening();
-            }
-          }, 300);
-        }
+        // Para prática de pronúncia, não reiniciar automaticamente - manter contínuo
+        console.log("[SpeechRecognition] Transcript updated for pronunciation analysis");
       }
 
-      setInterimTranscript(interimTranscriptResult);
+      // Sempre atualizar interim para feedback visual imediato
+      if (interimTranscriptResult) {
+        setInterimTranscript(interimTranscriptResult);
+        lastActivityTime = Date.now();
+      }
       
       // Atualizar tempo de última atividade se houve qualquer resultado
       if (finalTranscriptResult || interimTranscriptResult) {

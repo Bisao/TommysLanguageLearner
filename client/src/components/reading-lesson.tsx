@@ -44,6 +44,9 @@ export default function ReadingLesson({
   const [readingMode, setReadingMode] = useState<'guided' | 'practice'>('guided');
   const [completedWords, setCompletedWords] = useState<Set<number>>(new Set());
   const [showTranslation, setShowTranslation] = useState(false);
+  const [pronunciationScores, setPronunciationScores] = useState<Map<number, {status: 'correct' | 'close' | 'incorrect', score: number}>>(new Map());
+  const [lastTranscriptWords, setLastTranscriptWords] = useState<string[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const textRef = useRef<HTMLDivElement>(null);
   const { 
@@ -59,7 +62,10 @@ export default function ReadingLesson({
   const { 
     startListening, 
     stopListening, 
-    transcript, 
+    transcript,
+    interimTranscript,
+    confidence,
+    resetTranscript,
     isSupported: speechRecognitionSupported 
   } = useSpeechRecognition();
 
@@ -77,6 +83,96 @@ export default function ReadingLesson({
       setCompletedWords(prev => new Set(prev).add(index));
     }
   }, [playText, isSupported]);
+
+  // Função para análise de similaridade de palavras
+  const calculateWordSimilarity = useCallback((spoken: string, target: string): number => {
+    const normalize = (str: string) => str.toLowerCase().replace(/[.,!?;:]/g, '').trim();
+    const spokenNorm = normalize(spoken);
+    const targetNorm = normalize(target);
+    
+    if (spokenNorm === targetNorm) return 1.0;
+    
+    // Levenshtein distance adaptado para pronúncia
+    const matrix = Array(spokenNorm.length + 1).fill(null).map(() => Array(targetNorm.length + 1).fill(0));
+    
+    for (let i = 0; i <= spokenNorm.length; i++) matrix[i][0] = i;
+    for (let j = 0; j <= targetNorm.length; j++) matrix[0][j] = j;
+    
+    for (let i = 1; i <= spokenNorm.length; i++) {
+      for (let j = 1; j <= targetNorm.length; j++) {
+        const cost = spokenNorm[i - 1] === targetNorm[j - 1] ? 0 : 1;
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j - 1] + cost
+        );
+      }
+    }
+    
+    const distance = matrix[spokenNorm.length][targetNorm.length];
+    const maxLength = Math.max(spokenNorm.length, targetNorm.length);
+    return maxLength > 0 ? 1 - (distance / maxLength) : 0;
+  }, []);
+
+  // Função para analisar pronúncia em tempo real
+  const analyzePronunciation = useCallback((spokenText: string) => {
+    if (!spokenText.trim() || readingMode !== 'practice') return;
+    
+    setIsAnalyzing(true);
+    const spokenWords = spokenText.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+    const targetWords = allWords.map(w => w.toLowerCase().replace(/[.,!?;:]/g, ''));
+    
+    console.log('[PronunciationAnalysis] Analisando:', { spokenWords, targetWords });
+    
+    // Encontrar melhor alinhamento sequencial
+    let bestMatchIndex = currentWordIndex >= 0 ? Math.max(0, currentWordIndex - 2) : 0;
+    let consecutiveMatches = 0;
+    
+    for (let i = 0; i < spokenWords.length; i++) {
+      const spokenWord = spokenWords[i];
+      let bestScore = 0;
+      let bestTargetIndex = -1;
+      
+      // Buscar próximas 5 palavras a partir da posição atual
+      const searchEnd = Math.min(bestMatchIndex + 5, targetWords.length);
+      for (let j = bestMatchIndex; j < searchEnd; j++) {
+        const similarity = calculateWordSimilarity(spokenWord, targetWords[j]);
+        if (similarity > bestScore) {
+          bestScore = similarity;
+          bestTargetIndex = j;
+        }
+      }
+      
+      if (bestTargetIndex >= 0 && bestScore > 0.6) {
+        // Palavra reconhecida com confiança
+        let status: 'correct' | 'close' | 'incorrect';
+        if (bestScore >= 0.9) {
+          status = 'correct';
+          consecutiveMatches++;
+        } else if (bestScore >= 0.75) {
+          status = 'close';
+          consecutiveMatches++;
+        } else {
+          status = 'incorrect';
+          consecutiveMatches = 0;
+        }
+        
+        console.log(`[PronunciationAnalysis] Palavra "${spokenWord}" → "${targetWords[bestTargetIndex]}" (${status}, score: ${bestScore.toFixed(2)})`);
+        
+        setPronunciationScores(prev => new Map(prev).set(bestTargetIndex, { status, score: bestScore }));
+        setCompletedWords(prev => new Set(prev).add(bestTargetIndex));
+        
+        // Atualizar posição atual se houve progresso sequencial
+        if (consecutiveMatches >= 2 || bestTargetIndex > currentWordIndex) {
+          setCurrentWordIndex(bestTargetIndex);
+          bestMatchIndex = bestTargetIndex + 1;
+        }
+      }
+    }
+    
+    setLastTranscriptWords(spokenWords);
+    setIsAnalyzing(false);
+  }, [readingMode, allWords, currentWordIndex, calculateWordSimilarity]);
 
   const startGuidedReading = useCallback((fromPosition: number = 0) => {
     console.log(`[ReadingLesson] Iniciando leitura guiada da posição ${fromPosition}`);
@@ -136,13 +232,18 @@ export default function ReadingLesson({
 
   const handleMicrophoneToggle = useCallback(() => {
     if (isListening) {
+      console.log('[PracticeMode] Parando gravação');
       stopListening();
       setIsListening(false);
     } else {
+      console.log('[PracticeMode] Iniciando prática de pronúncia');
+      resetTranscript();
+      setPronunciationScores(new Map());
+      setCurrentWordIndex(0);
       startListening();
       setIsListening(true);
     }
-  }, [isListening, startListening, stopListening]);
+  }, [isListening, startListening, stopListening, resetTranscript]);
 
   const resetLesson = useCallback(() => {
     // Stop all audio
@@ -154,8 +255,12 @@ export default function ReadingLesson({
     setReadingProgress(0);
     setCompletedWords(new Set());
     setIsListening(false);
+    setPronunciationScores(new Map());
+    setLastTranscriptWords([]);
+    setIsAnalyzing(false);
     stopListening();
-  }, [stopAudio, stopListening]);
+    resetTranscript();
+  }, [stopAudio, stopListening, resetTranscript]);
 
   const completeLesson = useCallback(() => {
     setReadingProgress(100);
@@ -176,6 +281,13 @@ export default function ReadingLesson({
   }, [audioIsPlaying]);
 
   // Removido monitoramento de pause state para evitar interferência com highlighting
+
+  // Analisar pronúncia quando transcript muda
+  useEffect(() => {
+    if (transcript && readingMode === 'practice' && isListening) {
+      analyzePronunciation(transcript);
+    }
+  }, [transcript, readingMode, isListening, analyzePronunciation]);
 
   // Separate effect for completion check to avoid dependency loop
   useEffect(() => {
@@ -413,6 +525,35 @@ export default function ReadingLesson({
 
                   const isCurrentWord = globalIndex === currentWordIndex;
                   const isCompleted = completedWords.has(globalIndex);
+                  const pronunciationFeedback = pronunciationScores.get(globalIndex);
+
+                  let wordClassName = '';
+                  let wordTitle = `Palavra ${globalIndex + 1}: ${word}`;
+
+                  if (isCurrentWord && readingMode === 'practice') {
+                    wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 z-10 animate-pulse';
+                  } else if (pronunciationFeedback) {
+                    const scorePercentage = Math.round(pronunciationFeedback.score * 100);
+                    wordTitle += ` - Pronúncia: ${pronunciationFeedback.status === 'correct' ? 'Excelente' : pronunciationFeedback.status === 'close' ? 'Boa' : 'Precisa melhorar'} (${scorePercentage}%)`;
+                    
+                    switch (pronunciationFeedback.status) {
+                      case 'correct':
+                        wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-bold border-2 border-green-300 shadow-md';
+                        break;
+                      case 'close':
+                        wordClassName = 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 font-medium border-2 border-yellow-300 shadow-md';
+                        break;
+                      case 'incorrect':
+                        wordClassName = 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 font-medium border-2 border-red-300 shadow-md';
+                        break;
+                    }
+                  } else if (isCurrentWord && readingMode === 'guided') {
+                    wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 z-10';
+                  } else if (isCompleted) {
+                    wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-medium';
+                  } else {
+                    wordClassName = 'hover:bg-gray-100 hover:shadow-md';
+                  }
 
                   return (
                     <span
@@ -421,15 +562,10 @@ export default function ReadingLesson({
                       className={`
                         inline-block mx-0.5 sm:mx-1 my-0.5 sm:my-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md cursor-pointer
                         transition-all duration-300 hover:scale-105
-                        ${isCurrentWord 
-                          ? 'text-word-current bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 z-10' 
-                          : isCompleted 
-                          ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-medium' 
-                          : 'hover:bg-gray-100 hover:shadow-md'
-                        }
+                        ${wordClassName}
                       `}
                       onClick={() => handleWordClick(word, globalIndex)}
-                      title={`Palavra ${globalIndex + 1}: ${word}`}
+                      title={wordTitle}
                     >
                       {word}
                     </span>
@@ -441,22 +577,73 @@ export default function ReadingLesson({
 
             {/* Speech Recognition Feedback */}
             <AnimatePresence>
-              {isListening && (
+              {isListening && readingMode === 'practice' && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="mt-6 p-4 bg-red-50 border-2 border-red-200 rounded-lg"
+                  className="mt-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg"
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                    <span className="text-red-700 font-medium">Gravando sua pronúncia...</span>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span className="text-blue-700 font-bold">🎤 Análise de Pronúncia Ativa</span>
+                    {isAnalyzing && (
+                      <div className="flex items-center gap-1 text-blue-600">
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-100"></div>
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-200"></div>
+                      </div>
+                    )}
                   </div>
-                  {transcript && (
-                    <div className="text-gray-700 bg-white p-2 rounded border">
-                      <strong>Você disse:</strong> "{transcript}"
+                  
+                  {(transcript || interimTranscript) && (
+                    <div className="space-y-2">
+                      <div className="text-gray-700 bg-white p-3 rounded border">
+                        <div className="flex items-center gap-2 mb-1">
+                          <strong className="text-blue-700">Reconhecido:</strong>
+                          {confidence > 0 && (
+                            <Badge variant={confidence > 0.8 ? "default" : confidence > 0.6 ? "secondary" : "destructive"}>
+                              {Math.round(confidence * 100)}% confiança
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-lg">
+                          {transcript && <span className="text-green-700 font-medium">{transcript}</span>}
+                          {interimTranscript && <span className="text-gray-500 italic"> {interimTranscript}</span>}
+                        </div>
+                      </div>
+                      
+                      {pronunciationScores.size > 0 && (
+                        <div className="bg-white p-3 rounded border">
+                          <strong className="text-blue-700 block mb-2">Feedback de Pronúncia:</strong>
+                          <div className="grid grid-cols-3 gap-2 text-sm">
+                            <div className="text-center">
+                              <div className="text-green-600 font-bold text-lg">
+                                {Array.from(pronunciationScores.values()).filter(s => s.status === 'correct').length}
+                              </div>
+                              <div className="text-green-600">Excelente</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-yellow-600 font-bold text-lg">
+                                {Array.from(pronunciationScores.values()).filter(s => s.status === 'close').length}
+                              </div>
+                              <div className="text-yellow-600">Boa</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-red-600 font-bold text-lg">
+                                {Array.from(pronunciationScores.values()).filter(s => s.status === 'incorrect').length}
+                              </div>
+                              <div className="text-red-600">Melhorar</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
+                  
+                  <div className="mt-3 text-sm text-blue-600">
+                    💡 <strong>Dica:</strong> Leia em voz alta seguindo o texto. As palavras ficarão coloridas conforme sua pronúncia.
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
