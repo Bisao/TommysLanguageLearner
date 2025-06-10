@@ -114,7 +114,7 @@ export default function ReadingLesson({
     return maxLength > 0 ? 1 - (distance / maxLength) : 0;
   }, []);
 
-  // Função para analisar pronúncia em tempo real
+  // Função para analisar pronúncia em tempo real - Sequencial rigoroso
   const analyzePronunciation = useCallback((spokenText: string) => {
     if (!spokenText.trim() || readingMode !== 'practice') return;
     
@@ -122,57 +122,83 @@ export default function ReadingLesson({
     const spokenWords = spokenText.toLowerCase().split(/\s+/).filter(w => w.length > 0);
     const targetWords = allWords.map(w => w.toLowerCase().replace(/[.,!?;:]/g, ''));
     
-    console.log('[PronunciationAnalysis] Analisando:', { spokenWords, targetWords });
+    console.log('[PronunciationAnalysis] Analisando sequencialmente:', { 
+      spokenWords, 
+      currentPosition: currentWordIndex,
+      nextExpectedWord: targetWords[currentWordIndex] || 'fim' 
+    });
     
-    // Encontrar melhor alinhamento sequencial
-    let bestMatchIndex = currentWordIndex >= 0 ? Math.max(0, currentWordIndex - 2) : 0;
-    let consecutiveMatches = 0;
+    // Começar sempre da posição atual ou próxima não completada
+    let currentPosition = Math.max(0, currentWordIndex);
     
+    // Encontrar a primeira palavra não completada
+    while (currentPosition < targetWords.length && completedWords.has(currentPosition)) {
+      currentPosition++;
+    }
+    
+    // Analisar cada palavra falada sequencialmente
     for (let i = 0; i < spokenWords.length; i++) {
       const spokenWord = spokenWords[i];
-      let bestScore = 0;
-      let bestTargetIndex = -1;
       
-      // Buscar próximas 5 palavras a partir da posição atual
-      const searchEnd = Math.min(bestMatchIndex + 5, targetWords.length);
-      for (let j = bestMatchIndex; j < searchEnd; j++) {
-        const similarity = calculateWordSimilarity(spokenWord, targetWords[j]);
-        if (similarity > bestScore) {
-          bestScore = similarity;
-          bestTargetIndex = j;
-        }
+      // Verificar se ainda há palavras para processar
+      if (currentPosition >= targetWords.length) {
+        console.log(`[PronunciationAnalysis] Texto completo! Posição ${currentPosition} >= ${targetWords.length}`);
+        break;
       }
       
-      if (bestTargetIndex >= 0 && bestScore > 0.6) {
-        // Palavra reconhecida com confiança
+      const targetWord = targetWords[currentPosition];
+      const similarity = calculateWordSimilarity(spokenWord, targetWord);
+      
+      console.log(`[PronunciationAnalysis] Posição ${currentPosition}: "${spokenWord}" vs "${targetWord}" = ${similarity.toFixed(2)}`);
+      
+      if (similarity > 0.6) {
+        // Palavra reconhecida na posição correta
         let status: 'correct' | 'close' | 'incorrect';
-        if (bestScore >= 0.9) {
+        if (similarity >= 0.9) {
           status = 'correct';
-          consecutiveMatches++;
-        } else if (bestScore >= 0.75) {
+        } else if (similarity >= 0.75) {
           status = 'close';
-          consecutiveMatches++;
         } else {
           status = 'incorrect';
-          consecutiveMatches = 0;
         }
         
-        console.log(`[PronunciationAnalysis] Palavra "${spokenWord}" → "${targetWords[bestTargetIndex]}" (${status}, score: ${bestScore.toFixed(2)})`);
+        console.log(`[PronunciationAnalysis] ✓ Palavra ${currentPosition} reconhecida: "${spokenWord}" → "${targetWord}" (${status})`);
         
-        setPronunciationScores(prev => new Map(prev).set(bestTargetIndex, { status, score: bestScore }));
-        setCompletedWords(prev => new Set(prev).add(bestTargetIndex));
+        // Marcar palavra como processada
+        setPronunciationScores(prev => new Map(prev).set(currentPosition, { status, score: similarity }));
+        setCompletedWords(prev => new Set(prev).add(currentPosition));
         
-        // Atualizar posição atual se houve progresso sequencial
-        if (consecutiveMatches >= 2 || bestTargetIndex > currentWordIndex) {
-          setCurrentWordIndex(bestTargetIndex);
-          bestMatchIndex = bestTargetIndex + 1;
+        // Avançar para próxima palavra
+        currentPosition++;
+        setCurrentWordIndex(currentPosition);
+      } else {
+        // Palavra não reconhecida - tentar próxima posição (permitir pequenos saltos)
+        console.log(`[PronunciationAnalysis] ✗ Palavra ${currentPosition} não reconhecida suficientemente: "${spokenWord}" vs "${targetWord}" (${similarity.toFixed(2)})`);
+        
+        // Verificar se a palavra falada corresponde à próxima palavra (tolerância para palavras perdidas)
+        if (currentPosition + 1 < targetWords.length) {
+          const nextTargetWord = targetWords[currentPosition + 1];
+          const nextSimilarity = calculateWordSimilarity(spokenWord, nextTargetWord);
+          
+          if (nextSimilarity > similarity && nextSimilarity > 0.7) {
+            console.log(`[PronunciationAnalysis] ↷ Pulando para próxima palavra: "${spokenWord}" → "${nextTargetWord}"`);
+            // Marcar palavra atual como incorreta e avançar
+            setPronunciationScores(prev => new Map(prev).set(currentPosition, { status: 'incorrect', score: similarity }));
+            currentPosition++;
+            
+            // Processar a próxima palavra
+            setPronunciationScores(prev => new Map(prev).set(currentPosition, { status: 'correct', score: nextSimilarity }));
+            setCompletedWords(prev => new Set(prev).add(currentPosition));
+            currentPosition++;
+            setCurrentWordIndex(currentPosition);
+          }
         }
       }
     }
     
     setLastTranscriptWords(spokenWords);
     setIsAnalyzing(false);
-  }, [readingMode, allWords, currentWordIndex, calculateWordSimilarity]);
+  }, [readingMode, allWords, currentWordIndex, completedWords, calculateWordSimilarity]);
 
   const startGuidedReading = useCallback((fromPosition: number = 0) => {
     console.log(`[ReadingLesson] Iniciando leitura guiada da posição ${fromPosition}`);
@@ -236,10 +262,11 @@ export default function ReadingLesson({
       stopListening();
       setIsListening(false);
     } else {
-      console.log('[PracticeMode] Iniciando prática de pronúncia');
+      console.log('[PracticeMode] Iniciando prática de pronúncia sequencial');
       resetTranscript();
       setPronunciationScores(new Map());
-      setCurrentWordIndex(0);
+      setCompletedWords(new Set());
+      setCurrentWordIndex(0); // Sempre começar da primeira palavra
       startListening();
       setIsListening(true);
     }
