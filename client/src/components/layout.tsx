@@ -23,9 +23,9 @@ export default function Layout({
   lessonTitle 
 }: LayoutProps) {
   return (
-    <div className="w-full min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800">
-      {/* Header Panel - Sempre no topo e separado */}
-      <div className="flex-shrink-0 w-full sticky top-0 z-50 shadow-md">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800">
+      {/* Fixed Header - Separado e fixo no topo */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 shadow-lg">
         <Header 
           user={user}
           audioControls={audioControls}
@@ -36,14 +36,14 @@ export default function Layout({
         />
       </div>
 
-      {/* Content Panel - Separado visualmente do header */}
-      <div className="flex-1 w-full mt-2 bg-white dark:bg-gray-800 rounded-t-lg shadow-inner overflow-hidden">
-        <ScrollArea className="h-full">
-          <div className="p-4">
+      {/* Main Content - Com padding-top para compensar header fixo */}
+      <main className="pt-16 sm:pt-20 lg:pt-24 min-h-screen">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+          <div className="py-4 sm:py-6 lg:py-8">
             {children}
           </div>
-        </ScrollArea>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }

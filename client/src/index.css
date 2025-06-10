@@ -42,6 +42,96 @@
   --cartoon-purple: 262 73% 66%;
   --cartoon-green: 142 71% 45%;
   --cartoon-pink: 330 81% 60%;
+
+  /* Responsive breakpoints */
+  --mobile-max: 639px;
+  --tablet-min: 640px;
+  --tablet-max: 1023px;
+  --desktop-min: 1024px;
+}
+
+/* Mobile-first responsive utilities */
+@media (max-width: 639px) {
+  .mobile-hidden { display: none !important; }
+  .mobile-flex { display: flex !important; }
+  .mobile-grid { display: grid !important; }
+  .mobile-block { display: block !important; }
+  
+  /* Mobile typography */
+  .mobile-text-xs { font-size: 0.75rem !important; }
+  .mobile-text-sm { font-size: 0.875rem !important; }
+  .mobile-text-base { font-size: 1rem !important; }
+  
+  /* Mobile spacing */
+  .mobile-p-2 { padding: 0.5rem !important; }
+  .mobile-p-4 { padding: 1rem !important; }
+  .mobile-m-2 { margin: 0.5rem !important; }
+  .mobile-gap-2 { gap: 0.5rem !important; }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .tablet-hidden { display: none !important; }
+  .tablet-flex { display: flex !important; }
+  .tablet-grid { display: grid !important; }
+  .tablet-block { display: block !important; }
+}
+
+@media (min-width: 1024px) {
+  .desktop-hidden { display: none !important; }
+  .desktop-flex { display: flex !important; }
+  .desktop-grid { display: grid !important; }
+  .desktop-block { display: block !important; }
+}
+
+/* Header responsiveness */
+.header-mobile {
+  height: 64px;
+  min-height: 64px;
+}
+
+.header-tablet {
+  height: 80px;
+  min-height: 80px;
+}
+
+.header-desktop {
+  height: 96px;
+  min-height: 96px;
+}
+
+/* Content spacing for fixed header */
+.content-mobile {
+  padding-top: 64px;
+}
+
+.content-tablet {
+  padding-top: 80px;
+}
+
+.content-desktop {
+  padding-top: 96px;
+}
+
+/* Smooth transitions */
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Touch-friendly targets */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Backdrop blur for glass effect */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.dark .glass-effect {
+  background: rgba(17, 24, 39, 0.95);
 }
 
 .dark {

@@ -88,21 +88,20 @@ export default function Home() {
 
   return (
     <Layout user={user as any}>
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
+      <div className="space-y-6">
         {/* Welcome Section */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8 sm:mb-12"
+          className="text-center"
         >
-          <div className="inline-block mb-3 sm:mb-4 floating-card">
+          <div className="inline-block mb-4 floating-card">
             <Mascot />
           </div>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold gradient-text mb-4 px-2">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold gradient-text mb-3 px-4">
             Olá {(user as any)?.username}! Vamos aprender inglês hoje?
           </h2>
-          <p className="text-base sm:text-lg lg:text-xl text-muted-foreground px-4 mb-6">Continue sua jornada de aprendizado com lições divertidas!</p>
+          <p className="text-sm sm:text-base lg:text-lg text-muted-foreground px-4">Continue sua jornada de aprendizado com lições divertidas!</p>
         </motion.div>
 
 
@@ -398,7 +397,7 @@ export default function Home() {
             </Card>
           </motion.div>
         </div>
-      </main>
+      </div>
 
       {/* Lesson Modal */}
       {showLessonModal && selectedLesson && (
