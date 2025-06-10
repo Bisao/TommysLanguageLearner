@@ -22,9 +22,9 @@ export default function Layout({
   lessonTitle 
 }: LayoutProps) {
   return (
-    <div className="w-full h-screen flex flex-col overflow-hidden">
-      {/* Header Panel - Fixed at top, outside scroll */}
-      <div className="flex-shrink-0 z-50 w-full">
+    <div className="w-full min-h-screen flex flex-col">
+      {/* Header Panel - Sempre no topo */}
+      <div className="flex-shrink-0 w-full sticky top-0 z-50">
         <Header 
           user={user}
           audioControls={audioControls}
@@ -35,11 +35,9 @@ export default function Layout({
         />
       </div>
 
-      {/* Content Panel - Scrollable area below header */}
-      <div className="flex-1 overflow-auto w-full">
-        <div className="w-full h-full">
-          {children}
-        </div>
+      {/* Content Panel - Ocupa o restante da tela abaixo do header */}
+      <div className="flex-1 w-full">
+        {children}
       </div>
     </div>
   );
