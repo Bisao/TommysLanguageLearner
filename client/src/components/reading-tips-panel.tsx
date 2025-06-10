@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -76,7 +75,7 @@ export const ReadingTipsPanel: React.FC<ReadingTipsPanelProps> = ({
   ];
 
   return (
-    <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-right-5 fade-in-0 duration-300">
+    <div className="fixed top-20 sm:top-24 lg:top-28 right-4 z-50 animate-in slide-in-from-right-5 fade-in-0 duration-300">
       <Card className="w-80 bg-blue-50 border-blue-200 shadow-lg">
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-3">
@@ -100,7 +99,7 @@ export const ReadingTipsPanel: React.FC<ReadingTipsPanelProps> = ({
               </Button>
             </div>
           </div>
-          
+
           <div className="space-y-2">
             {tips.map((tip, index) => (
               <div key={index} className="flex items-center gap-3 text-sm text-blue-700">
