@@ -78,7 +78,7 @@ export default function Header({ user, audioControls, showAudioControls, isReadi
           {/* Mobile Navigation & Logo Section */}
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
             <MobileNavigation user={user} />
-            
+
             {/* Logo Section / Reading Lesson Navigation */}
             <div className="flex-1 min-w-0">
               {isReadingPage ? (
@@ -96,7 +96,7 @@ export default function Header({ user, audioControls, showAudioControls, isReadi
                     <ArrowLeft size={16} className="sm:w-4 sm:h-4" />
                     <span className="hidden sm:inline ml-1">Voltar</span>
                   </Button>
-                  
+
                   <div className="flex-1 text-center mx-2 min-w-0">
                     <motion.div
                       initial={{ opacity: 0, scale: 0.9 }}

@@ -159,21 +159,25 @@ These trends suggest that the future of food will be more diverse, more sustaina
     >
       <main>
         {/* Lesson Content with Enhanced Animation */}
-        <ScrollArea className="h-[calc(100vh-100px)]">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="px-3 sm:px-4 lg:px-8"
-          >
-            <ReadingLessonRefactored
-              title={currentLessonData.title}
-              text={currentLessonData.text}
-              onComplete={handleLessonComplete}
-              onControlsReady={handleControlsReady}
-            />
-          </motion.div>
-        </ScrollArea>
+        <div className="w-full max-w-none overflow-hidden">
+          <ScrollArea className="h-[calc(100vh-60px)] sm:h-[calc(100vh-80px)] md:h-[calc(100vh-100px)] lg:h-[calc(100vh-120px)]">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              className="w-full max-w-none px-2 sm:px-3 md:px-4 lg:px-6 xl:px-8 py-2 sm:py-4 md:py-6"
+            >
+              <div className="w-full max-w-4xl mx-auto">
+                <ReadingLessonRefactored
+                  title={currentLessonData.title}
+                  text={currentLessonData.text}
+                  onComplete={handleLessonComplete}
+                  onControlsReady={handleControlsReady}
+                />
+              </div>
+            </motion.div>
+          </ScrollArea>
+        </div>
 
         {/* Reading Tips Panel */}
         <ReadingTipsPanel 
