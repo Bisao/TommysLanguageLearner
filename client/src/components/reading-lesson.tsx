@@ -76,15 +76,73 @@ export default function ReadingLesson({
   const isSupported = 'speechSynthesis' in window;
 
   // Função para dividir texto em palavras, mantendo pontuação junto com a palavra
+  // e identificando linking sounds para destaque especial
   const splitTextIntoWords = (inputText: string): string[] => {
-    return inputText.split(/\s+/)
+    // Primeiro, normalizar espaços e quebras de linha
+    const normalizedText = inputText.replace(/\s+/g, ' ').trim();
+    
+    // Dividir por espaços, mantendo pontuação anexa às palavras
+    return normalizedText.split(/\s+/)
       .filter(word => word.length > 0)
       .map(word => {
-        // Manter a palavra com sua pontuação anexa
-        // Não separar pontuação - ela ficará destacada junto com a palavra
-        return word;
+        // Garantir que pontuação permaneça anexa sem espaços extras
+        // Exemplo: "carro." não "carro ."
+        return word.trim();
       })
       .filter(word => word.length > 0);
+  };
+
+  // Função para identificar linking sounds comuns em inglês
+  const hasLinkingSound = (currentWord: string, nextWord: string): boolean => {
+    if (!currentWord || !nextWord) return false;
+    
+    // Limpar pontuação mas manter a palavra original para análise
+    const currentClean = currentWord.toLowerCase().replace(/[^\w]/g, '');
+    const nextClean = nextWord.toLowerCase().replace(/[^\w]/g, '');
+    const currentOriginal = currentWord.toLowerCase();
+    const nextOriginal = nextWord.toLowerCase();
+    
+    console.log(`[LinkingSound] Analisando: "${currentWord}" + "${nextWord}" | Clean: "${currentClean}" + "${nextClean}"`);
+    
+    // Casos especiais para números e pontuação
+    const currentEndsWithNumber = /\d$/.test(currentClean);
+    const currentHasPunctuation = /[.!?;:,]/.test(currentOriginal);
+    
+    // Consonant to vowel linking (mais comum)
+    const currentEndsWithConsonant = /[bcdfghjklmnpqrstvwxyz]$/i.test(currentClean);
+    const nextStartsWithVowel = /^[aeiou]/i.test(nextClean);
+    
+    // Vowel to vowel linking 
+    const currentEndsWithVowel = /[aeiou]$/i.test(currentClean);
+    
+    // R-linking (when word ends in 'r' sound)
+    const rLinking = /r$/i.test(currentClean) && /^[aeiou]/i.test(nextClean);
+    
+    // S-linking (plural/possessive linking)
+    const sLinking = /s$/i.test(currentClean) && /^[aeiou]/i.test(nextClean);
+    
+    // T/D linking (past tense and numbers)
+    const tLinking = /[td]$/i.test(currentClean) && /^[aeiou]/i.test(nextClean);
+    
+    // N-linking (articles, conjunctions)
+    const nLinking = /n$/i.test(currentClean) && /^[aeiou]/i.test(nextClean);
+    
+    // Casos especiais de números como "2021"
+    const numberLinking = currentEndsWithNumber && /^[aeiou]/i.test(nextClean);
+    
+    const hasLinking = (currentEndsWithConsonant && nextStartsWithVowel) || 
+                      (currentEndsWithVowel && nextStartsWithVowel) || 
+                      rLinking || 
+                      sLinking || 
+                      tLinking || 
+                      nLinking ||
+                      numberLinking;
+    
+    if (hasLinking) {
+      console.log(`[LinkingSound] ✓ LINKING ENCONTRADO: "${currentWord}" → "${nextWord}"`);
+    }
+    
+    return hasLinking;
   };
 
   // Split text into paragraphs and then words, preserving structure
@@ -690,9 +748,24 @@ export default function ReadingLesson({
                   const isCompleted = completedWords.has(globalIndex);
                   const pronunciationFeedback = pronunciationScores.get(globalIndex);
                   const isNextToRead = readingMode === 'practice' && globalIndex === currentWordIndex && currentWordIndex >= 0;
+                  
+                  // Verificar linking sound com a próxima palavra e palavra anterior
+                  const paragraphWords = splitTextIntoWords(paragraph);
+                  const nextWord = wordIndex < paragraphWords.length - 1 ? paragraphWords[wordIndex + 1] : null;
+                  const previousWord = wordIndex > 0 ? paragraphWords[wordIndex - 1] : null;
+                  const hasLinking = nextWord && hasLinkingSound(word, nextWord);
+                  const completesLinking = previousWord && hasLinkingSound(previousWord, word);
 
                   let wordClassName = '';
                   let wordTitle = `Palavra ${globalIndex + 1}: ${word}`;
+                  
+                  // Adicionar informação sobre linking sound no título
+                  if (hasLinking) {
+                    wordTitle += ` - Conecta com a próxima palavra (linking sound)`;
+                  }
+                  if (completesLinking) {
+                    wordTitle += ` - Completa linking sound da palavra anterior`;
+                  }
 
                   if (isNextToRead && !isCompleted) {
                     wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 animate-pulse border-2 border-blue-600';
@@ -712,11 +785,41 @@ export default function ReadingLesson({
                         break;
                     }
                   } else if (isCurrentWord && readingMode === 'guided' && audioIsPlaying) {
-                    wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 border-2 border-blue-300';
+                    // Destacar linking sounds com cor especial quando é a palavra atual
+                    if (hasLinking && completesLinking) {
+                      // Palavra que inicia E completa linking sound
+                      wordClassName = 'bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold shadow-xl transform scale-110 border-2 border-orange-300 animate-pulse';
+                    } else if (hasLinking) {
+                      // Palavra que inicia linking sound (borda esquerda laranja)
+                      wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 border-l-4 border-orange-400 border-t-2 border-b-2 border-r-2 border-blue-300';
+                    } else if (completesLinking) {
+                      // Palavra que completa linking sound (borda direita laranja)
+                      wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 border-r-4 border-orange-400 border-t-2 border-b-2 border-l-2 border-blue-300';
+                    } else {
+                      wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 border-2 border-blue-300';
+                    }
                   } else if (isCompleted) {
-                    wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-medium border border-green-300';
+                    // Manter destaque sutil para linking sounds mesmo após completadas
+                    if (hasLinking && completesLinking) {
+                      wordClassName = 'bg-gradient-to-r from-orange-50 to-pink-50 text-orange-800 font-medium border-2 border-orange-200 shadow-sm';
+                    } else if (hasLinking) {
+                      wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-medium border border-green-300 border-l-2 border-l-orange-200';
+                    } else if (completesLinking) {
+                      wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-medium border border-green-300 border-r-2 border-r-orange-200';
+                    } else {
+                      wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-medium border border-green-300';
+                    }
                   } else {
-                    wordClassName = 'hover:bg-gray-100 hover:shadow-md text-gray-700';
+                    // Destaque sutil para linking sounds não lidas
+                    if (hasLinking && completesLinking) {
+                      wordClassName = 'hover:bg-orange-50 hover:shadow-md text-gray-700 border-2 border-orange-200';
+                    } else if (hasLinking) {
+                      wordClassName = 'hover:bg-gray-100 hover:shadow-md text-gray-700 border-l-2 border-orange-200';
+                    } else if (completesLinking) {
+                      wordClassName = 'hover:bg-gray-100 hover:shadow-md text-gray-700 border-r-2 border-orange-200';
+                    } else {
+                      wordClassName = 'hover:bg-gray-100 hover:shadow-md text-gray-700';
+                    }
                   }
 
                   return (
