@@ -78,15 +78,17 @@
 
   html {
     overflow-x: hidden;
+    height: 100%;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
     background: var(--gradient-surface);
-    min-height: 100vh;
+    height: 100vh;
     transition: background-color 0.3s ease, color 0.3s ease;
-    padding-top: 80px; /* Espaço para o header fixo */
-    overflow-x: hidden;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
   }
 
   /* Garantir que o header sempre ocupe 100% da largura */
@@ -97,17 +99,7 @@
     right: 0 !important;
   }
 
-  @media (min-width: 640px) {
-    body {
-      padding-top: 96px;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    body {
-      padding-top: 112px;
-    }
-  }
+  
 
   /* Ensure scrollbars don't overlap the header */
   ::-webkit-scrollbar {

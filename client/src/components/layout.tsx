@@ -22,9 +22,9 @@ export default function Layout({
   lessonTitle 
 }: LayoutProps) {
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="w-full h-screen flex flex-col overflow-hidden">
       {/* Header Panel - Fixed at top, outside scroll */}
-      <div className="flex-shrink-0 z-50">
+      <div className="flex-shrink-0 z-50 w-full">
         <Header 
           user={user}
           audioControls={audioControls}
@@ -36,8 +36,8 @@ export default function Layout({
       </div>
 
       {/* Content Panel - Scrollable area below header */}
-      <div className="flex-1 overflow-auto">
-        <div className="w-full min-h-full">
+      <div className="flex-1 overflow-auto w-full">
+        <div className="w-full h-full">
           {children}
         </div>
       </div>
