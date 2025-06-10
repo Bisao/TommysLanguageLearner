@@ -61,7 +61,7 @@ These trends suggest that the future of food will be more diverse, more sustaina
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
         <Layout user={user} />
 
-        <main className="pt-20 sm:pt-24 px-3 sm:px-4 lg:px-8">
+        <main className="px-3 sm:px-4 lg:px-8">
           <div className="max-w-4xl mx-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.5 }}
