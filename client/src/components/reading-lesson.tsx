@@ -181,24 +181,33 @@ export default function ReadingLesson({
     setPendingPause(false);
     
     playText(text, 'en-US', fromPosition, (word: string, wordIndex: number) => {
-      // Verificação mais robusta do estado de reprodução
-      const isActivelySpeaking = speechSynthesis.speaking && !speechSynthesis.paused;
-      const shouldHighlight = isActivelySpeaking || !speechSynthesis.speaking;
+      console.log(`[ReadingLesson] Destacando palavra ${wordIndex}: "${word}"`);
       
-      if (shouldHighlight) {
-        console.log(`[ReadingLesson] Destacando palavra ${wordIndex}: "${word}"`);
-        setCurrentWordIndex(wordIndex);
-        setCompletedWords(prev => new Set(prev).add(wordIndex));
-        setLastCompletedWordIndex(wordIndex);
-        
-        // Verificar se há pausa pendente após completar uma palavra
-        if (pendingPause) {
-          console.log(`[ReadingLesson] Executando pausa suave após palavra ${wordIndex}`);
-          setTimeout(() => {
-            pauseAudio();
-            setPendingPause(false);
-          }, 100);
+      // Sempre destacar a palavra atual
+      setCurrentWordIndex(wordIndex);
+      
+      // Marcar palavra como lida
+      setCompletedWords(prev => new Set(prev).add(wordIndex));
+      setLastCompletedWordIndex(wordIndex);
+      
+      // Scroll para a palavra atual
+      setTimeout(() => {
+        const wordElement = document.querySelector(`[data-word-index="${wordIndex}"]`);
+        if (wordElement) {
+          wordElement.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
         }
+      }, 50);
+      
+      // Verificar se há pausa pendente após completar uma palavra
+      if (pendingPause) {
+        console.log(`[ReadingLesson] Executando pausa suave após palavra ${wordIndex}`);
+        setTimeout(() => {
+          pauseAudio();
+          setPendingPause(false);
+        }, 100);
       }
     });
   }, [text, playText, audioIsPlaying, isPaused, pendingPause, pauseAudio]);
@@ -286,6 +295,12 @@ export default function ReadingLesson({
     setPendingPause(false);
     setLastCompletedWordIndex(-1);
     setLastProcessedTranscript('');
+    
+    // Ensure word highlighting is cleared
+    setTimeout(() => {
+      setCurrentWordIndex(-1);
+    }, 100);
+    
     stopListening();
     resetTranscript();
     
@@ -316,9 +331,20 @@ export default function ReadingLesson({
       // Audio finished reading all words in guided mode
       console.log(`[ReadingLesson] Leitura finalizada - última palavra: ${lastCompletedWordIndex}/${totalWords}`);
       setAudioFinished(true);
+      // Hide current word highlight when reading is finished
+      setTimeout(() => {
+        setCurrentWordIndex(-1);
+      }, 500);
       // Completion message is temporarily disabled as requested
     }
   }, [audioIsPlaying, isPaused, lastCompletedWordIndex, totalWords, isStopped, readingMode]);
+
+  // Hide current word highlight when audio stops
+  useEffect(() => {
+    if (!audioIsPlaying && !isPaused && isStopped && readingMode === 'guided') {
+      setCurrentWordIndex(-1);
+    }
+  }, [audioIsPlaying, isPaused, isStopped, readingMode]);
 
   // Removido monitoramento de pause state para evitar interferência com highlighting
 
@@ -567,16 +593,16 @@ export default function ReadingLesson({
                   }
                   globalIndex += wordIndex;
 
-                  const isCurrentWord = globalIndex === currentWordIndex;
+                  const isCurrentWord = globalIndex === currentWordIndex && currentWordIndex >= 0;
                   const isCompleted = completedWords.has(globalIndex);
                   const pronunciationFeedback = pronunciationScores.get(globalIndex);
-                  const isNextToRead = readingMode === 'practice' && globalIndex === currentWordIndex;
+                  const isNextToRead = readingMode === 'practice' && globalIndex === currentWordIndex && currentWordIndex >= 0;
 
                   let wordClassName = '';
                   let wordTitle = `Palavra ${globalIndex + 1}: ${word}`;
 
                   if (isNextToRead && !isCompleted) {
-                    wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 z-10 animate-pulse border-2 border-blue-600';
+                    wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 animate-pulse border-2 border-blue-600';
                   } else if (pronunciationFeedback) {
                     const scorePercentage = Math.round(pronunciationFeedback.score * 100);
                     wordTitle += ` - Pronúncia: ${pronunciationFeedback.status === 'correct' ? 'Excelente' : pronunciationFeedback.status === 'close' ? 'Boa' : 'Precisa melhorar'} (${scorePercentage}%)`;
@@ -592,12 +618,12 @@ export default function ReadingLesson({
                         wordClassName = 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 font-medium border-2 border-red-300 shadow-md';
                         break;
                     }
-                  } else if (isCurrentWord && readingMode === 'guided') {
-                    wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 z-10';
+                  } else if (isCurrentWord && readingMode === 'guided' && audioIsPlaying) {
+                    wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 border-2 border-blue-300';
                   } else if (isCompleted) {
-                    wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-medium';
+                    wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-medium border border-green-300';
                   } else {
-                    wordClassName = 'hover:bg-gray-100 hover:shadow-md';
+                    wordClassName = 'hover:bg-gray-100 hover:shadow-md text-gray-700';
                   }
 
                   return (
@@ -606,11 +632,14 @@ export default function ReadingLesson({
                       data-word-index={globalIndex}
                       className={`
                         inline-block mx-0.5 sm:mx-1 my-0.5 sm:my-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md cursor-pointer
-                        transition-all duration-300 hover:scale-105
+                        transition-all duration-200 hover:scale-105 relative
                         ${wordClassName}
                       `}
                       onClick={() => handleWordClick(word, globalIndex)}
                       title={wordTitle}
+                      style={{
+                        zIndex: isCurrentWord && readingMode === 'guided' ? 10 : 1
+                      }}
                     >
                       {word}
                     </span>
