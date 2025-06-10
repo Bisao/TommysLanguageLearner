@@ -72,7 +72,7 @@ export default function Header({ user, audioControls, showAudioControls, isReadi
 
   return (
     <header className="fixed top-0 left-0 right-0 w-full z-[99999] glass-card border-b border-border/50 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+      <div className="w-full max-w-none mx-0 px-3 sm:px-4 lg:px-8">
         <div className="flex justify-between items-center py-2 sm:py-4">
           {/* Logo Section / Reading Lesson Navigation */}
           {isReadingPage ? (
