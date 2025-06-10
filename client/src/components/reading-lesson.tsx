@@ -1,28 +1,22 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { 
   Play, 
   Pause, 
-  Volume2, 
   VolumeX, 
-  RotateCcw, 
-  BookOpen, 
-  Eye, 
-  Clock,
+  RotateCcw,
   Headphones,
   Mic,
   MicOff,
   CheckCircle2,
   Target,
-  Sparkles,
-  ChevronRight
+  Sparkles
 } from "lucide-react";
-import { useAudio } from "@/hooks/use-audio";
-import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { useReadingGuide } from "@/hooks/use-reading-guide";
 
 interface ReadingLessonProps {
   title: string;
