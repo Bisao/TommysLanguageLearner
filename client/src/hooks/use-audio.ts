@@ -426,15 +426,20 @@ export function useAudio() {
     console.log("[Audio] pauseAudio chamado:", {
       speaking: speechSynthesis.speaking,
       paused: speechSynthesis.paused,
-      currentWordPosition
+      currentWordPosition,
+      currentStateIndex: speechStateRef.current.currentWordIndex
     });
     
     if (speechSynthesis.speaking && !speechSynthesis.paused) {
       try {
         const isMobile = isMobileDevice();
         
+        // Capturar posição atual antes de pausar
+        const currentPos = Math.max(currentWordPosition, speechStateRef.current.currentWordIndex);
+        setCurrentWordPosition(currentPos);
+        
         if (isMobile) {
-          console.log("[Audio] Dispositivo móvel - usando cancel com tracking");
+          console.log(`[Audio] Dispositivo móvel - pausando na posição ${currentPos}`);
           speechSynthesis.cancel();
           setIsPaused(true);
           setIsPlaying(false);
@@ -449,9 +454,9 @@ export function useAudio() {
               setIsPlaying(false);
               speechStateRef.current.isPaused = true;
               speechStateRef.current.isPlaying = false;
-              console.log("[Audio] Pause nativo bem-sucedido");
+              console.log(`[Audio] Pause nativo bem-sucedido na posição ${currentPos}`);
             } else {
-              console.log("[Audio] Pause falhou - usando fallback");
+              console.log(`[Audio] Pause falhou - usando fallback na posição ${currentPos}`);
               speechSynthesis.cancel();
               setIsPaused(true);
               setIsPlaying(false);
@@ -463,6 +468,8 @@ export function useAudio() {
         
       } catch (error) {
         console.warn("[Audio] Erro ao pausar:", error);
+        const currentPos = Math.max(currentWordPosition, speechStateRef.current.currentWordIndex);
+        setCurrentWordPosition(currentPos);
         speechSynthesis.cancel();
         setIsPaused(true);
         setIsPlaying(false);
@@ -477,7 +484,9 @@ export function useAudio() {
       isPaused,
       hasUtterance: !!currentUtterance,
       speaking: speechSynthesis.speaking,
-      paused: speechSynthesis.paused
+      paused: speechSynthesis.paused,
+      currentWordPosition,
+      currentStateIndex: speechStateRef.current.currentWordIndex
     });
     
     if (currentUtterance && isPaused && !isStopped) {
@@ -491,13 +500,16 @@ export function useAudio() {
               setIsPlaying(true);
               speechStateRef.current.isPaused = false;
               speechStateRef.current.isPlaying = true;
-              console.log("[Audio] Resume bem-sucedido");
+              
+              // Manter posição atual para continuidade do tracking
+              const resumePos = Math.max(currentWordPosition, speechStateRef.current.currentWordIndex);
+              console.log(`[Audio] Resume bem-sucedido da posição ${resumePos}`);
             }
           }, 100);
           
           return true;
         } else {
-          console.log("[Audio] Speech foi interrompido - não é possível resumir");
+          console.log("[Audio] Speech foi interrompido - não é possível resumir nativamente");
           return false;
         }
       } catch (error) {
@@ -507,7 +519,7 @@ export function useAudio() {
     }
     
     return false;
-  }, [currentUtterance, isPaused, isStopped]);
+  }, [currentUtterance, isPaused, isStopped, currentWordPosition]);
 
   const stopAudio = useCallback(() => {
     console.log("[Audio] stopAudio chamado - reset completo");
