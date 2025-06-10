@@ -114,45 +114,33 @@ export default function ReadingLesson({
     return maxLength > 0 ? 1 - (distance / maxLength) : 0;
   }, []);
 
-  // Função para analisar pronúncia em tempo real - Sequencial rigoroso
-  const analyzePronunciation = useCallback((spokenText: string) => {
-    if (!spokenText.trim() || readingMode !== 'practice') return;
+  // Função para analisar pronúncia apenas quando há nova fala
+  const analyzePronunciation = useCallback((finalTranscript: string, isNewSpeech: boolean = false) => {
+    if (!finalTranscript.trim() || readingMode !== 'practice' || !isNewSpeech) return;
     
+    console.log('[PronunciationAnalysis] Nova fala detectada, analisando:', finalTranscript);
     setIsAnalyzing(true);
-    const spokenWords = spokenText.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+    
+    const spokenWords = finalTranscript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
     const targetWords = allWords.map(w => w.toLowerCase().replace(/[.,!?;:]/g, ''));
     
-    console.log('[PronunciationAnalysis] Analisando sequencialmente:', { 
-      spokenWords, 
-      currentPosition: currentWordIndex,
-      nextExpectedWord: targetWords[currentWordIndex] || 'fim' 
-    });
-    
-    // Começar sempre da posição atual ou próxima não completada
-    let currentPosition = Math.max(0, currentWordIndex);
-    
-    // Encontrar a primeira palavra não completada
+    // Encontrar a próxima palavra não completada
+    let currentPosition = 0;
     while (currentPosition < targetWords.length && completedWords.has(currentPosition)) {
       currentPosition++;
     }
     
-    // Analisar cada palavra falada sequencialmente
-    for (let i = 0; i < spokenWords.length; i++) {
+    console.log('[PronunciationAnalysis] Posição inicial para análise:', currentPosition);
+    
+    // Analisar apenas as palavras novas faladas
+    for (let i = 0; i < spokenWords.length && currentPosition < targetWords.length; i++) {
       const spokenWord = spokenWords[i];
-      
-      // Verificar se ainda há palavras para processar
-      if (currentPosition >= targetWords.length) {
-        console.log(`[PronunciationAnalysis] Texto completo! Posição ${currentPosition} >= ${targetWords.length}`);
-        break;
-      }
-      
       const targetWord = targetWords[currentPosition];
       const similarity = calculateWordSimilarity(spokenWord, targetWord);
       
-      console.log(`[PronunciationAnalysis] Posição ${currentPosition}: "${spokenWord}" vs "${targetWord}" = ${similarity.toFixed(2)}`);
+      console.log(`[PronunciationAnalysis] Palavra ${currentPosition}: "${spokenWord}" vs "${targetWord}" = ${similarity.toFixed(2)}`);
       
       if (similarity > 0.6) {
-        // Palavra reconhecida na posição correta
         let status: 'correct' | 'close' | 'incorrect';
         if (similarity >= 0.9) {
           status = 'correct';
@@ -162,43 +150,21 @@ export default function ReadingLesson({
           status = 'incorrect';
         }
         
-        console.log(`[PronunciationAnalysis] ✓ Palavra ${currentPosition} reconhecida: "${spokenWord}" → "${targetWord}" (${status})`);
+        console.log(`[PronunciationAnalysis] ✓ Palavra aceita: "${spokenWord}" → "${targetWord}" (${status})`);
         
-        // Marcar palavra como processada
+        // Marcar palavra e avançar
         setPronunciationScores(prev => new Map(prev).set(currentPosition, { status, score: similarity }));
         setCompletedWords(prev => new Set(prev).add(currentPosition));
-        
-        // Avançar para próxima palavra
+        setCurrentWordIndex(currentPosition + 1);
         currentPosition++;
-        setCurrentWordIndex(currentPosition);
       } else {
-        // Palavra não reconhecida - tentar próxima posição (permitir pequenos saltos)
-        console.log(`[PronunciationAnalysis] ✗ Palavra ${currentPosition} não reconhecida suficientemente: "${spokenWord}" vs "${targetWord}" (${similarity.toFixed(2)})`);
-        
-        // Verificar se a palavra falada corresponde à próxima palavra (tolerância para palavras perdidas)
-        if (currentPosition + 1 < targetWords.length) {
-          const nextTargetWord = targetWords[currentPosition + 1];
-          const nextSimilarity = calculateWordSimilarity(spokenWord, nextTargetWord);
-          
-          if (nextSimilarity > similarity && nextSimilarity > 0.7) {
-            console.log(`[PronunciationAnalysis] ↷ Pulando para próxima palavra: "${spokenWord}" → "${nextTargetWord}"`);
-            // Marcar palavra atual como incorreta e avançar
-            setPronunciationScores(prev => new Map(prev).set(currentPosition, { status: 'incorrect', score: similarity }));
-            currentPosition++;
-            
-            // Processar a próxima palavra
-            setPronunciationScores(prev => new Map(prev).set(currentPosition, { status: 'correct', score: nextSimilarity }));
-            setCompletedWords(prev => new Set(prev).add(currentPosition));
-            currentPosition++;
-            setCurrentWordIndex(currentPosition);
-          }
-        }
+        console.log(`[PronunciationAnalysis] ✗ Palavra rejeitada: "${spokenWord}" vs "${targetWord}"`);
+        break; // Parar na primeira palavra não reconhecida
       }
     }
     
-    setLastTranscriptWords(spokenWords);
     setIsAnalyzing(false);
-  }, [readingMode, allWords, currentWordIndex, completedWords, calculateWordSimilarity]);
+  }, [readingMode, allWords, completedWords, calculateWordSimilarity]);
 
   const startGuidedReading = useCallback((fromPosition: number = 0) => {
     console.log(`[ReadingLesson] Iniciando leitura guiada da posição ${fromPosition}`);
@@ -266,7 +232,8 @@ export default function ReadingLesson({
       resetTranscript();
       setPronunciationScores(new Map());
       setCompletedWords(new Set());
-      setCurrentWordIndex(0); // Sempre começar da primeira palavra
+      setCurrentWordIndex(0);
+      setLastProcessedTranscript(''); // Resetar controle de transcript
       startListening();
       setIsListening(true);
     }
@@ -285,6 +252,7 @@ export default function ReadingLesson({
     setPronunciationScores(new Map());
     setLastTranscriptWords([]);
     setIsAnalyzing(false);
+    setLastProcessedTranscript(''); // Resetar controle de transcript
     stopListening();
     resetTranscript();
   }, [stopAudio, stopListening, resetTranscript]);
@@ -309,12 +277,16 @@ export default function ReadingLesson({
 
   // Removido monitoramento de pause state para evitar interferência com highlighting
 
-  // Analisar pronúncia quando transcript muda
+  // Controlar quando analisar pronúncia - apenas em mudanças de transcript final
+  const [lastProcessedTranscript, setLastProcessedTranscript] = useState('');
+  
   useEffect(() => {
-    if (transcript && readingMode === 'practice' && isListening) {
-      analyzePronunciation(transcript);
+    if (transcript && readingMode === 'practice' && isListening && transcript !== lastProcessedTranscript) {
+      console.log('[PronunciationControl] Nova fala detectada:', { old: lastProcessedTranscript, new: transcript });
+      analyzePronunciation(transcript, true);
+      setLastProcessedTranscript(transcript);
     }
-  }, [transcript, readingMode, isListening, analyzePronunciation]);
+  }, [transcript, readingMode, isListening, lastProcessedTranscript, analyzePronunciation]);
 
   // Separate effect for completion check to avoid dependency loop
   useEffect(() => {
@@ -553,12 +525,13 @@ export default function ReadingLesson({
                   const isCurrentWord = globalIndex === currentWordIndex;
                   const isCompleted = completedWords.has(globalIndex);
                   const pronunciationFeedback = pronunciationScores.get(globalIndex);
+                  const isNextToRead = readingMode === 'practice' && globalIndex === currentWordIndex;
 
                   let wordClassName = '';
                   let wordTitle = `Palavra ${globalIndex + 1}: ${word}`;
 
-                  if (isCurrentWord && readingMode === 'practice') {
-                    wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 z-10 animate-pulse';
+                  if (isNextToRead && !isCompleted) {
+                    wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 z-10 animate-pulse border-2 border-blue-600';
                   } else if (pronunciationFeedback) {
                     const scorePercentage = Math.round(pronunciationFeedback.score * 100);
                     wordTitle += ` - Pronúncia: ${pronunciationFeedback.status === 'correct' ? 'Excelente' : pronunciationFeedback.status === 'close' ? 'Boa' : 'Precisa melhorar'} (${scorePercentage}%)`;
