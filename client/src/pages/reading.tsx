@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -49,7 +48,7 @@ These trends suggest that the future of food will be more diverse, more sustaina
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
         <Header user={user} />
-        
+
         <main className="pt-20 sm:pt-24 px-3 sm:px-4 lg:px-8">
           <div className="max-w-4xl mx-auto">
             <motion.div
@@ -80,11 +79,11 @@ These trends suggest that the future of food will be more diverse, more sustaina
                       <Trophy className="w-12 h-12 text-yellow-900" />
                     </div>
                   </motion.div>
-                  
+
                   <CardTitle className="text-3xl sm:text-4xl text-green-800 mb-4 font-bold">
                     🎉 Parabéns!
                   </CardTitle>
-                  
+
                   <div className="flex flex-wrap justify-center gap-2 mb-4">
                     <Badge className="bg-green-500 text-white">
                       <Star className="w-4 h-4 mr-1" />
@@ -96,7 +95,7 @@ These trends suggest that the future of food will be more diverse, more sustaina
                     </Badge>
                   </div>
                 </CardHeader>
-                
+
                 <CardContent className="text-center pb-8">
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -107,7 +106,7 @@ These trends suggest that the future of food will be more diverse, more sustaina
                       Você concluiu sua lição de leitura com sucesso! <br />
                       Continue praticando para melhorar ainda mais suas habilidades.
                     </p>
-                    
+
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                       <Button 
                         onClick={goBack}
@@ -146,9 +145,9 @@ These trends suggest that the future of food will be more diverse, more sustaina
         onGoBack={goBack}
         lessonTitle={currentLessonData.title}
       />
-      
+
       <main className="pt-20 sm:pt-24">
-        
+
 
         {/* Lesson Content with Enhanced Animation */}
         <motion.div
