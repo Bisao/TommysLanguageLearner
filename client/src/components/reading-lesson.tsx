@@ -75,12 +75,38 @@ export default function ReadingLesson({
 
   const isSupported = 'speechSynthesis' in window;
 
+  // Função para dividir texto em palavras, preservando pontuação separada
+  const splitTextIntoWords = (inputText: string): string[] => {
+    return inputText.split(/\s+/)
+      .filter(word => word.length > 0)
+      .flatMap(word => {
+        // Preservar palavras com números, apóstrofes e hífens
+        if (/^[a-zA-Z0-9''\-]+$/.test(word)) {
+          return [word];
+        }
+        
+        // Separar pontuação no final
+        const match = word.match(/^([a-zA-Z0-9''\-]+)([.!?;:,]+)$/);
+        if (match && match[1] && match[2]) {
+          return [match[1], ...match[2].split('')];
+        }
+        
+        return [word];
+      })
+      .filter(word => word.length > 0);
+  };
+
   // Split text into paragraphs and then words, preserving structure
   const paragraphs = text.split('\n\n').filter(p => p.trim().length > 0);
-  const titleWords = title.split(/\s+/).filter(word => word.length > 0);
-  const textWords = text.split(/\s+/).filter(word => word.length > 0);
+  const titleWords = splitTextIntoWords(title);
+  const textWords = splitTextIntoWords(text);
   const allWords = [...titleWords, ...textWords]; // Incluir palavras do título
   const totalWords = allWords.length;
+  
+  // Debug: Log das palavras processadas
+  console.log('[WordProcessing] Título dividido em:', titleWords);
+  console.log('[WordProcessing] Texto dividido em:', textWords.slice(0, 20), '... (primeiras 20)');
+  console.log('[WordProcessing] Total de palavras:', totalWords);
 
   const handleWordClick = useCallback((word: string, index: number) => {
     if (isSupported) {
@@ -128,6 +154,7 @@ export default function ReadingLesson({
     setIsAnalyzing(true);
     
     const spokenWords = finalTranscript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+    // Usar a mesma função de divisão para manter consistência
     const targetWords = allWords.map(w => w.toLowerCase().replace(/[.,!?;:]/g, ''));
     
     // Encontrar a próxima palavra não completada
@@ -137,11 +164,21 @@ export default function ReadingLesson({
     }
     
     console.log('[PronunciationAnalysis] Posição inicial para análise:', currentPosition);
+    console.log('[PronunciationAnalysis] Palavras alvo:', targetWords.slice(currentPosition, currentPosition + 5));
     
     // Analisar apenas as palavras novas faladas
     for (let i = 0; i < spokenWords.length && currentPosition < targetWords.length; i++) {
       const spokenWord = spokenWords[i];
       const targetWord = targetWords[currentPosition];
+      
+      // Pular pontuação isolada
+      if (/^[.,!?;:]+$/.test(targetWord) && targetWord.length <= 2) {
+        console.log(`[PronunciationAnalysis] Pulando pontuação: "${targetWord}"`);
+        setCompletedWords(prev => new Set(prev).add(currentPosition));
+        currentPosition++;
+        continue;
+      }
+      
       const similarity = calculateWordSimilarity(spokenWord, targetWord);
       
       console.log(`[PronunciationAnalysis] Palavra ${currentPosition}: "${spokenWord}" vs "${targetWord}" = ${similarity.toFixed(2)}`);
@@ -645,14 +682,18 @@ export default function ReadingLesson({
               {/* Parágrafos do texto */}
               {paragraphs.map((paragraph, pIndex) => (
                 <p key={`paragraph-${pIndex}`} className="leading-relaxed">
-                  {paragraph.split(' ').map((word, wordIndex) => {
+                  {splitTextIntoWords(paragraph).map((word, wordIndex) => {
                   // Calcular índice global incluindo palavras do título
-                  const titleWordsCount = title.split(' ').filter(w => w.trim().length > 0).length;
+                  const titleWordsCount = titleWords.length;
                   let globalIndex = titleWordsCount; // Começar após as palavras do título
+                  
+                  // Somar palavras dos parágrafos anteriores
                   for (let i = 0; i < pIndex; i++) {
-                    globalIndex += paragraphs[i].split(' ').filter(w => w.trim().length > 0).length;
+                    globalIndex += splitTextIntoWords(paragraphs[i]).length;
                   }
                   globalIndex += wordIndex;
+                  
+                  console.log(`[WordMapping] Parágrafo ${pIndex}, palavra ${wordIndex}: "${word}" → índice global ${globalIndex}`);
 
                   const isCurrentWord = globalIndex === currentWordIndex && currentWordIndex >= 0;
                   const isCompleted = completedWords.has(globalIndex);
