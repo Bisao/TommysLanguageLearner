@@ -47,6 +47,8 @@ export default function ReadingLesson({
   const [pronunciationScores, setPronunciationScores] = useState<Map<number, {status: 'correct' | 'close' | 'incorrect', score: number}>>(new Map());
   const [lastTranscriptWords, setLastTranscriptWords] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [audioFinished, setAudioFinished] = useState(false);
+  const [showCompletionMessage, setShowCompletionMessage] = useState(false);
 
   const textRef = useRef<HTMLDivElement>(null);
   const { 
