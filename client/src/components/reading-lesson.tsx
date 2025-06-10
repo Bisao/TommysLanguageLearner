@@ -49,6 +49,8 @@ export default function ReadingLesson({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [audioFinished, setAudioFinished] = useState(false);
   const [showCompletionMessage, setShowCompletionMessage] = useState(false);
+  const [pendingPause, setPendingPause] = useState(false);
+  const [lastCompletedWordIndex, setLastCompletedWordIndex] = useState(-1);
 
   const textRef = useRef<HTMLDivElement>(null);
   const { 
@@ -176,6 +178,7 @@ export default function ReadingLesson({
     }
     
     console.log(`[ReadingLesson] Iniciando leitura guiada da posição ${fromPosition}`);
+    setPendingPause(false);
     
     playText(text, 'en-US', fromPosition, (word: string, wordIndex: number) => {
       // Verificação mais robusta do estado de reprodução
@@ -186,38 +189,55 @@ export default function ReadingLesson({
         console.log(`[ReadingLesson] Destacando palavra ${wordIndex}: "${word}"`);
         setCurrentWordIndex(wordIndex);
         setCompletedWords(prev => new Set(prev).add(wordIndex));
+        setLastCompletedWordIndex(wordIndex);
+        
+        // Verificar se há pausa pendente após completar uma palavra
+        if (pendingPause) {
+          console.log(`[ReadingLesson] Executando pausa suave após palavra ${wordIndex}`);
+          setTimeout(() => {
+            pauseAudio();
+            setPendingPause(false);
+          }, 100);
+        }
       }
     });
-  }, [text, playText, audioIsPlaying, isPaused]);
+  }, [text, playText, audioIsPlaying, isPaused, pendingPause, pauseAudio]);
 
 
   const handlePlayPause = useCallback(() => {
     console.log(`[ReadingLesson] handlePlayPause - Estado atual:`, {
-      isPlaying, isPaused, isStopped, currentWordPosition, readingMode
+      isPlaying, isPaused, isStopped, currentWordPosition, readingMode, lastCompletedWordIndex
     });
 
     if (isPlaying) {
-      // Pausar reprodução atual
-      console.log(`[ReadingLesson] Pausando reprodução`);
-      pauseAudio();
-      setIsPlaying(false);
+      // Implementar pausa suave: aguardar término da palavra atual
+      if (readingMode === 'guided' && speechSynthesis.speaking) {
+        console.log(`[ReadingLesson] Solicitando pausa suave`);
+        setPendingPause(true);
+      } else {
+        console.log(`[ReadingLesson] Pausando imediatamente`);
+        pauseAudio();
+        setIsPlaying(false);
+      }
     } else if (isPaused && !isStopped && readingMode === 'guided') {
-      // Em modo guiado, tentar resumir sem restart automático
-      console.log(`[ReadingLesson] Tentando resumir da posição ${currentWordPosition}`);
+      // Retomar da próxima palavra após a última completada
+      const resumePosition = Math.max(0, lastCompletedWordIndex + 1);
+      console.log(`[ReadingLesson] Retomando da palavra ${resumePosition} (próxima após ${lastCompletedWordIndex})`);
+      
       const resumed = resumeAudio();
       
       if (resumed) {
         setIsPlaying(true);
       } else {
-        // Se resume falhou, continuar da posição atual sem restart automático
-        console.log(`[ReadingLesson] Resume falhou - continuando da posição ${currentWordPosition}`);
-        setCurrentWordIndex(Math.max(0, currentWordPosition));
-        startGuidedReading(Math.max(0, currentWordPosition));
+        // Se resume falhou, continuar da próxima palavra
+        console.log(`[ReadingLesson] Resume falhou - continuando da posição ${resumePosition}`);
+        setCurrentWordIndex(resumePosition);
+        startGuidedReading(resumePosition);
         setIsPlaying(true);
       }
     } else {
       // Iniciar do começo ou posição atual
-      const startPosition = isStopped ? 0 : Math.max(0, currentWordIndex);
+      const startPosition = isStopped ? 0 : Math.max(0, lastCompletedWordIndex >= 0 ? lastCompletedWordIndex + 1 : 0);
       console.log(`[ReadingLesson] Iniciando nova reprodução da posição ${startPosition}`);
       
       setIsPlaying(true);
@@ -227,7 +247,7 @@ export default function ReadingLesson({
         startGuidedReading(startPosition);
       }
     }
-  }, [isPlaying, isPaused, isStopped, readingMode, text, playText, pauseAudio, resumeAudio, startGuidedReading, currentWordPosition, currentWordIndex]);
+  }, [isPlaying, isPaused, isStopped, readingMode, pauseAudio, resumeAudio, startGuidedReading, currentWordPosition, lastCompletedWordIndex]);
 
 
 
@@ -252,7 +272,7 @@ export default function ReadingLesson({
     // Stop all audio
     stopAudio();
 
-    // Reset all states
+    // Reset all states including new guided reading states
     setIsPlaying(false);
     setCurrentWordIndex(-1);
     setReadingProgress(0);
@@ -263,9 +283,13 @@ export default function ReadingLesson({
     setIsAnalyzing(false);
     setAudioFinished(false);
     setShowCompletionMessage(false);
-    setLastProcessedTranscript(''); // Resetar controle de transcript
+    setPendingPause(false);
+    setLastCompletedWordIndex(-1);
+    setLastProcessedTranscript('');
     stopListening();
     resetTranscript();
+    
+    console.log('[ReadingLesson] Reset completo realizado');
   }, [stopAudio, stopListening, resetTranscript]);
 
   const completeLesson = useCallback(() => {
@@ -286,16 +310,15 @@ export default function ReadingLesson({
     setIsPlaying(audioIsPlaying);
   }, [audioIsPlaying]);
 
-  // Detect when audio reading is finished
+  // Detect when audio reading is finished - using lastCompletedWordIndex for accuracy
   useEffect(() => {
-    if (!audioIsPlaying && !isPaused && currentWordIndex >= totalWords - 1 && !isStopped && readingMode === 'guided') {
+    if (!audioIsPlaying && !isPaused && lastCompletedWordIndex >= totalWords - 1 && !isStopped && readingMode === 'guided') {
       // Audio finished reading all words in guided mode
+      console.log(`[ReadingLesson] Leitura finalizada - última palavra: ${lastCompletedWordIndex}/${totalWords}`);
       setAudioFinished(true);
-      setTimeout(() => {
-        setShowCompletionMessage(true);
-      }, 1000); // Show message 1 second after audio finishes
+      // Completion message is temporarily disabled as requested
     }
-  }, [audioIsPlaying, isPaused, currentWordIndex, totalWords, isStopped, readingMode]);
+  }, [audioIsPlaying, isPaused, lastCompletedWordIndex, totalWords, isStopped, readingMode]);
 
   // Removido monitoramento de pause state para evitar interferência com highlighting
 
@@ -670,44 +693,34 @@ export default function ReadingLesson({
               )}
             </AnimatePresence>
 
-            {/* Completion Message */}
-            <AnimatePresence>
-              {showCompletionMessage && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="mt-6 text-center"
-                >
-                  <Card className="border-2 border-green-300 bg-green-50">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-center gap-2 text-green-700 mb-3">
-                        <CheckCircle2 className="w-6 h-6" />
-                        <span className="font-semibold text-lg">
-                          Você terminou a leitura!
-                        </span>
-                      </div>
-                      <p className="text-green-600 mb-4">
-                        Que tal praticar a sua pronúncia agora?
-                      </p>
-                      <Button
-                        onClick={() => {
-                          // Scroll to top
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
-                          // Hide completion message
-                          setShowCompletionMessage(false);
-                          // Switch to practice mode
-                          setReadingMode('practice');
-                        }}
-                        className="bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        Voltar ao Topo
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Completion Message - Temporarily Disabled */}
+            {false && showCompletionMessage && (
+              <div className="mt-6 text-center">
+                <Card className="border-2 border-green-300 bg-green-50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-center gap-2 text-green-700 mb-3">
+                      <CheckCircle2 className="w-6 h-6" />
+                      <span className="font-semibold text-lg">
+                        Você terminou a leitura!
+                      </span>
+                    </div>
+                    <p className="text-green-600 mb-4">
+                      Que tal praticar a sua pronúncia agora?
+                    </p>
+                    <Button
+                      onClick={() => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        setShowCompletionMessage(false);
+                        setReadingMode('practice');
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      Voltar ao Topo
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
