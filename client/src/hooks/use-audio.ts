@@ -218,28 +218,20 @@ export function useAudio() {
       textLength: text.length
     });
 
-    // Reset estados
+    // Reset estados apenas se não estiver reproduzindo corretamente
     setIsStopped(false);
-    cleanup();
-
-    // Limpeza agressiva do estado anterior
-    if (speechSynthesis.speaking) {
+    
+    // Só fazer limpeza se não estiver em reprodução ativa válida
+    if (speechSynthesis.speaking && !speechStateRef.current.isPlaying) {
+      console.log(`[Audio-${sessionId}] Limpando estado anterior inválido`);
+      cleanup();
       speechSynthesis.cancel();
-      
-      // Aguardar limpeza completa com timeout
-      let attempts = 0;
-      const maxAttempts = 30;
-      while (speechSynthesis.speaking && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-      }
-      
-      if (speechSynthesis.speaking) {
-        console.warn(`[Audio-${sessionId}] Forçando cancel após ${attempts} tentativas`);
-        speechSynthesis.cancel();
-      }
-      
       await new Promise(resolve => setTimeout(resolve, 200));
+    } else if (!speechSynthesis.speaking) {
+      cleanup();
+    } else {
+      console.log(`[Audio-${sessionId}] Reprodução válida detectada - mantendo estado`);
+      return; // Não iniciar nova reprodução se já há uma válida
     }
 
     // Preparar texto
@@ -380,10 +372,14 @@ export function useAudio() {
     // Iniciar fala com tratamento robusto
     const startSpeech = async () => {
       try {
-        if (speechSynthesis.speaking) {
-          console.log(`[Audio-${sessionId}] Speech ainda ativo - aguardando...`);
+        // Só cancelar se não estiver em uma sessão ativa válida
+        if (speechSynthesis.speaking && !speechStateRef.current.isPlaying) {
+          console.log(`[Audio-${sessionId}] Speech ativo de sessão anterior - cancelando`);
           speechSynthesis.cancel();
           await new Promise(resolve => setTimeout(resolve, 300));
+        } else if (speechSynthesis.speaking && speechStateRef.current.isPlaying) {
+          console.log(`[Audio-${sessionId}] Speech já ativo na sessão atual - ignorando`);
+          return;
         }
         
         console.log(`[Audio-${sessionId}] Iniciando reprodução`);

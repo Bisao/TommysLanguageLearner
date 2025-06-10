@@ -169,12 +169,18 @@ export default function ReadingLesson({
   }, [readingMode, allWords, completedWords, calculateWordSimilarity]);
 
   const startGuidedReading = useCallback((fromPosition: number = 0) => {
+    // Prevenir múltiplas chamadas simultâneas
+    if (audioIsPlaying && !isPaused) {
+      console.log(`[ReadingLesson] Reprodução já ativa - ignorando nova chamada`);
+      return;
+    }
+    
     console.log(`[ReadingLesson] Iniciando leitura guiada da posição ${fromPosition}`);
     
     playText(text, 'en-US', fromPosition, (word: string, wordIndex: number) => {
       // Verificação mais robusta do estado de reprodução
       const isActivelySpeaking = speechSynthesis.speaking && !speechSynthesis.paused;
-      const shouldHighlight = isActivelySpeaking || !speechSynthesis.speaking; // Permite highlight mesmo quando speech acabou
+      const shouldHighlight = isActivelySpeaking || !speechSynthesis.speaking;
       
       if (shouldHighlight) {
         console.log(`[ReadingLesson] Destacando palavra ${wordIndex}: "${word}"`);
@@ -182,7 +188,7 @@ export default function ReadingLesson({
         setCompletedWords(prev => new Set(prev).add(wordIndex));
       }
     });
-  }, [text, playText]);
+  }, [text, playText, audioIsPlaying, isPaused]);
 
 
   const handlePlayPause = useCallback(() => {

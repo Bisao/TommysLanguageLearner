@@ -1,0 +1,29 @@
+react-dom.development.js:29895 Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+reading-lesson.tsx:189 [ReadingLesson] handlePlayPause - Estado atual: {isPlaying: false, isPaused: false, isStopped: false, currentWordPosition: 0, readingMode: 'guided'}
+reading-lesson.tsx:215 [ReadingLesson] Iniciando nova reprodução da posição 0
+reading-lesson.tsx:172 [ReadingLesson] Iniciando leitura guiada da posição 0
+use-audio.ts:214 [Audio-1749542116344] Iniciando playText: {speaking: false, paused: false, fromPosition: 0, textLength: 1125}
+use-audio.ts:62 [WordSync-1749542116344] Inicializando sistema avançado - Palavras: 174, Mobile: false
+use-audio.ts:389 [Audio-1749542116344] Iniciando reprodução
+use-audio.ts:295 [Audio-1749542116344] Fala iniciada
+reading-lesson.tsx:180 [ReadingLesson] Destacando palavra 0: "The"
+use-audio.ts:158 [WordSync-1749542116344] Boundary event - palavra 0: "The"
+reading-lesson.tsx:180 [ReadingLesson] Destacando palavra 0: "The"
+use-audio.ts:158 [WordSync-1749542116344] Boundary event - palavra 1: "pandemic"
+reading-lesson.tsx:180 [ReadingLesson] Destacando palavra 1: "pandemic"
+use-audio.ts:384 [Audio-1749542116344] Speech ainda ativo - aguardando...
+use-audio.ts:326 [Audio-1749542116344] Erro na síntese: interrupted
+use-audio.ts:329 [Audio-1749542116344] Interrupção esperada durante pause/resume
+use-audio.ts:389 [Audio-1749542116344] Iniciando reprodução
+use-audio.ts:295 [Audio-1749542116344] Fala iniciada
+reading-lesson.tsx:180 [ReadingLesson] Destacando palavra 0: "The"
+use-audio.ts:158 [WordSync-1749542116344] Boundary event - palavra 0: "The"
+reading-lesson.tsx:180 [ReadingLesson] Destacando palavra 0: "The"
+use-audio.ts:158 [WordSync-1749542116344] Boundary event - palavra 1: "pandemic"
+reading-lesson.tsx:180 [ReadingLesson] Destacando palavra 1: "pandemic"
+reading-lesson.tsx:189 [ReadingLesson] handlePlayPause - Estado atual: {isPlaying: true, isPaused: false, isStopped: false, currentWordPosition: 2, readingMode: 'guided'}
+reading-lesson.tsx:195 [ReadingLesson] Pausando reprodução
+use-audio.ts:426 [Audio] pauseAudio chamado: {speaking: true, paused: false, currentWordPosition: 2}
+use-audio.ts:454 [Audio] Pause falhou - usando fallback
+use-audio.ts:326 [Audio-1749542116344] Erro na síntese: interrupted
+use-audio.ts:329 [Audio-1749542116344] Interrupção esperada durante pause/resume
