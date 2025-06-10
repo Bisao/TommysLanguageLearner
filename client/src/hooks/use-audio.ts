@@ -484,6 +484,22 @@ export function useAudio() {
     setIsStopped(true);
   }, [cleanup]);
 
+  // Cleanup on unmount to prevent speech from continuing
+  const cleanupOnUnmount = useCallback(() => {
+    console.log("Cleaning up audio on unmount");
+    cleanup();
+    if (speechSynthesis.speaking) {
+      speechSynthesis.cancel();
+    }
+    setIsPlaying(false);
+    setIsPaused(false);
+    setCurrentUtterance(null);
+    setCurrentText("");
+    setRemainingText("");
+    setCurrentWordPosition(0);
+    setIsStopped(true);
+  }, [cleanup]);
+
   return { 
     playText, 
     pauseAudio, 
@@ -495,6 +511,7 @@ export function useAudio() {
     remainingText,
     currentUtterance,
     currentWordPosition,
-    isStopped
+    isStopped,
+    cleanupOnUnmount
   };
 }
