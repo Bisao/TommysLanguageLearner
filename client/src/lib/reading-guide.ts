@@ -86,6 +86,11 @@ export class ReadingGuide {
    * Divide texto em palavras, mantendo pontuação anexa (versão privada)
    */
   private splitTextIntoWordsPrivate(inputText: string): string[] {
+    if (!inputText || typeof inputText !== 'string') {
+      console.warn('[ReadingGuide] Texto inválido fornecido para splitTextIntoWordsPrivate:', inputText);
+      return [];
+    }
+    
     const normalizedText = inputText.replace(/\s+/g, ' ').trim();
     
     return normalizedText.split(/\s+/)
@@ -127,6 +132,11 @@ export class ReadingGuide {
    * Função pública para dividir texto (exposta para uso externo)
    */
   public splitTextIntoWords(inputText: string): string[] {
+    if (!inputText || typeof inputText !== 'string') {
+      console.warn('[ReadingGuide] Texto inválido fornecido para splitTextIntoWords:', inputText);
+      return [];
+    }
+    
     const normalizedText = inputText.replace(/\s+/g, ' ').trim();
     
     return normalizedText.split(/\s+/)
@@ -136,20 +146,51 @@ export class ReadingGuide {
   }
 
   /**
+   * Cria dados de fallback para uma palavra em caso de erro
+   */
+  private createFallbackWordData(word: string, paragraphIndex: number, wordIndex: number, globalIndex?: number): WordData {
+    return {
+      text: word,
+      globalIndex: globalIndex ?? 0,
+      paragraphIndex,
+      wordIndex,
+      hasLinking: false,
+      completesLinking: false,
+      isCurrentWord: false,
+      isCompleted: false,
+      pronunciationFeedback: undefined
+    };
+  }
+
+  /**
    * Processa dados de uma palavra específica
    */
   public getWordData(word: string, paragraphIndex: number, wordIndex: number): WordData {
+    // Verificações de segurança
+    if (!this.paragraphs || paragraphIndex >= this.paragraphs.length || paragraphIndex < 0) {
+      console.warn('[ReadingGuide] Índice de parágrafo inválido:', paragraphIndex, 'Total paragraphs:', this.paragraphs?.length);
+      return this.createFallbackWordData(word, paragraphIndex, wordIndex);
+    }
+
     const titleWordsCount = this.titleWords.length;
     let globalIndex = titleWordsCount;
     
     // Calcular índice global
     for (let i = 0; i < paragraphIndex; i++) {
-      globalIndex += this.splitTextIntoWordsPrivate(this.paragraphs[i]).length;
+      if (this.paragraphs[i]) {
+        globalIndex += this.splitTextIntoWordsPrivate(this.paragraphs[i]).length;
+      }
     }
     globalIndex += wordIndex;
 
     // Verificar linking sounds
-    const paragraphWords = this.splitTextIntoWordsPrivate(this.paragraphs[paragraphIndex]);
+    const currentParagraph = this.paragraphs[paragraphIndex];
+    if (!currentParagraph) {
+      console.warn('[ReadingGuide] Parágrafo não encontrado no índice:', paragraphIndex);
+      return this.createFallbackWordData(word, paragraphIndex, wordIndex, globalIndex);
+    }
+
+    const paragraphWords = this.splitTextIntoWordsPrivate(currentParagraph);
     const nextWord = wordIndex < paragraphWords.length - 1 ? paragraphWords[wordIndex + 1] : null;
     const previousWord = wordIndex > 0 ? paragraphWords[wordIndex - 1] : null;
     
