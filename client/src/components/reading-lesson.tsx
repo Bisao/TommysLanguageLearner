@@ -75,26 +75,10 @@ export default function ReadingLesson({
 
   const isSupported = 'speechSynthesis' in window;
 
-  // Função para dividir texto em palavras, tratando pontuação corretamente
-  const splitIntoWords = (text: string): string[] => {
-    // Dividir por espaços e depois separar pontuação que não faz parte da palavra
-    return text.split(/\s+/)
-      .filter(word => word.length > 0)
-      .flatMap(word => {
-        // Separar pontuação no final (exceto apóstrofes que fazem parte da palavra)
-        const match = word.match(/^(.*?)([.!?;:,]*)$/);
-        if (match && match[2] && match[1]) {
-          return [match[1], ...match[2].split('')];
-        }
-        return [word];
-      })
-      .filter(word => word.length > 0);
-  };
-
   // Split text into paragraphs and then words, preserving structure
   const paragraphs = text.split('\n\n').filter(p => p.trim().length > 0);
-  const titleWords = splitIntoWords(title);
-  const textWords = splitIntoWords(text);
+  const titleWords = title.split(/\s+/).filter(word => word.length > 0);
+  const textWords = text.split(/\s+/).filter(word => word.length > 0);
   const allWords = [...titleWords, ...textWords]; // Incluir palavras do título
   const totalWords = allWords.length;
 
@@ -143,7 +127,7 @@ export default function ReadingLesson({
     console.log('[PronunciationAnalysis] Nova fala detectada, analisando:', finalTranscript);
     setIsAnalyzing(true);
     
-    const spokenWords = splitIntoWords(finalTranscript.toLowerCase());
+    const spokenWords = finalTranscript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
     const targetWords = allWords.map(w => w.toLowerCase().replace(/[.,!?;:]/g, ''));
     
     // Encontrar a próxima palavra não completada
@@ -601,7 +585,7 @@ export default function ReadingLesson({
               {/* Título como parte do texto a ser lido */}
               <div className="text-center mb-6">
                 <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">
-                  {titleWords.map((word, wordIndex) => {
+                  {title.split(' ').map((word, wordIndex) => {
                     const globalIndex = wordIndex;
                     const isCurrentWord = globalIndex === currentWordIndex && currentWordIndex >= 0;
                     const isCompleted = completedWords.has(globalIndex);
@@ -661,12 +645,12 @@ export default function ReadingLesson({
               {/* Parágrafos do texto */}
               {paragraphs.map((paragraph, pIndex) => (
                 <p key={`paragraph-${pIndex}`} className="leading-relaxed">
-                  {splitIntoWords(paragraph).map((word, wordIndex) => {
+                  {paragraph.split(' ').map((word, wordIndex) => {
                   // Calcular índice global incluindo palavras do título
-                  const titleWordsCount = titleWords.length;
+                  const titleWordsCount = title.split(' ').filter(w => w.trim().length > 0).length;
                   let globalIndex = titleWordsCount; // Começar após as palavras do título
                   for (let i = 0; i < pIndex; i++) {
-                    globalIndex += splitIntoWords(paragraphs[i]).length;
+                    globalIndex += paragraphs[i].split(' ').filter(w => w.trim().length > 0).length;
                   }
                   globalIndex += wordIndex;
 
