@@ -46,7 +46,16 @@ export default function ReadingLesson({
   const [showTranslation, setShowTranslation] = useState(false);
 
   const textRef = useRef<HTMLDivElement>(null);
-  const { playText, pauseAudio, resumeAudio, stopAudio, isPlaying: audioIsPlaying, isPaused } = useAudio();
+  const { 
+    playText, 
+    pauseAudio, 
+    resumeAudio, 
+    stopAudio, 
+    isPlaying: audioIsPlaying, 
+    isPaused,
+    currentWordPosition,
+    isStopped
+  } = useAudio();
   const { 
     startListening, 
     stopListening, 
@@ -84,26 +93,35 @@ export default function ReadingLesson({
   const handlePlayPause = useCallback(() => {
     if (isPlaying) {
       // Pause current playback
-      if (isPaused) {
-        resumeAudio();
-        setIsPlaying(true);
-      } else {
-        pauseAudio();
-        setIsPlaying(false);
-        // Clear current word highlighting when paused
-        setCurrentWordIndex(-1);
+      pauseAudio();
+      setIsPlaying(false);
+      // Clear current word highlighting when paused
+      setCurrentWordIndex(-1);
+    } else if (isPaused && !isStopped) {
+      // Resume from where we paused
+      const resumed = resumeAudio();
+      if (!resumed) {
+        // If resume failed, restart from current position
+        if (readingMode === 'guided') {
+          startGuidedReading(currentWordPosition);
+        } else {
+          playText(text, 'en-US', currentWordPosition);
+        }
       }
-    } else {
       setIsPlaying(true);
-      setCurrentWordIndex(0);
+    } else {
+      // Start from beginning or current position
+      setIsPlaying(true);
+      const startPosition = isStopped ? 0 : currentWordPosition;
+      setCurrentWordIndex(startPosition);
+      
       if (readingMode === 'guided') {
-        startGuidedReading();
+        startGuidedReading(startPosition);
       } else {
-        // Natural reading of full text
-        playText(text);
+        playText(text, 'en-US', startPosition);
       }
     }
-  }, [isPlaying, isPaused, readingMode, text, playText, pauseAudio, resumeAudio, startGuidedReading]);
+  }, [isPlaying, isPaused, isStopped, readingMode, text, playText, pauseAudio, resumeAudio, startGuidedReading, currentWordPosition]);
 
   
 

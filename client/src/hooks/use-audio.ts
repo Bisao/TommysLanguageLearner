@@ -7,6 +7,8 @@ export function useAudio() {
   const [currentText, setCurrentText] = useState("");
   const [remainingText, setRemainingText] = useState("");
   const [currentUtterance, setCurrentUtterance] = useState<SpeechSynthesisUtterance | null>(null);
+  const [currentWordPosition, setCurrentWordPosition] = useState(0);
+  const [isStopped, setIsStopped] = useState(false);
   const wordTimerRef = useRef<NodeJS.Timeout | null>(null);
   const cleanupTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const boundaryCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -36,8 +38,12 @@ export function useAudio() {
       speaking: speechSynthesis.speaking,
       paused: speechSynthesis.paused,
       isPlaying,
-      isPaused
+      isPaused,
+      fromPosition
     });
+
+    // Reset stopped state when starting new playback
+    setIsStopped(false);
 
     // Limpar qualquer timer anterior
     cleanup();
@@ -73,6 +79,8 @@ export function useAudio() {
       return;
     }
     
+    // Store current position for resume functionality
+    setCurrentWordPosition(fromPosition);
     setCurrentText(text);
     setRemainingText(textToPlay);
 
@@ -133,6 +141,9 @@ export function useAudio() {
             const globalWordIndex = fromPosition + currentWordIndex;
             const wordToHighlight = words[currentWordIndex] || '';
             console.log(`Timer highlighting word ${globalWordIndex}: "${wordToHighlight}"`);
+            
+            // Update current word position for resume functionality
+            setCurrentWordPosition(globalWordIndex + 1);
             onWordBoundary(wordToHighlight, globalWordIndex);
             currentWordIndex++;
           } else if (currentWordIndex >= words.length || !speechSynthesis.speaking) {
@@ -179,6 +190,8 @@ export function useAudio() {
           const globalWordIndex = fromPosition + wordIndex;
           currentWordIndex = wordIndex + 1;
           
+          // Update current word position for resume functionality
+          setCurrentWordPosition(globalWordIndex + 1);
           console.log(`Boundary event highlighting word ${globalWordIndex}: "${words[wordIndex] || ''}"`);
           onWordBoundary(words[wordIndex] || '', globalWordIndex);
         }
@@ -355,6 +368,10 @@ export function useAudio() {
     
     if (speechSynthesis.speaking && !speechSynthesis.paused) {
       try {
+        // Store current position before pausing
+        const words = currentText.split(' ').filter(word => word.trim().length > 0);
+        console.log(`Pausing at word position: ${currentWordPosition}`);
+        
         speechSynthesis.pause();
         
         // Verificar se realmente pausou
@@ -362,7 +379,7 @@ export function useAudio() {
           if (speechSynthesis.paused || !speechSynthesis.speaking) {
             setIsPaused(true);
             setIsPlaying(false);
-            console.log("Speech synthesis paused successfully");
+            console.log("Speech synthesis paused successfully at position:", currentWordPosition);
           } else {
             console.warn("Pause failed, using cancel fallback");
             speechSynthesis.cancel();
@@ -386,17 +403,18 @@ export function useAudio() {
       setIsPlaying(false);
       console.log("Speech was already paused");
     }
-  }, []);
+  }, [currentText, currentWordPosition]);
 
   const resumeAudio = useCallback(() => {
     console.log("resumeAudio called - speechSynthesis state:", {
       paused: speechSynthesis.paused,
       speaking: speechSynthesis.speaking,
-      pending: speechSynthesis.pending
+      pending: speechSynthesis.pending,
+      currentWordPosition
     });
     console.log("Hook state:", { currentUtterance: !!currentUtterance, isPaused, isPlaying });
     
-    if (currentUtterance && isPaused) {
+    if (currentUtterance && isPaused && !isStopped) {
       try {
         // Primeiro verificar se realmente está pausado
         if (speechSynthesis.speaking) {
@@ -410,7 +428,7 @@ export function useAudio() {
               if (speechSynthesis.speaking && !speechSynthesis.paused) {
                 setIsPaused(false);
                 setIsPlaying(true);
-                console.log("Speech synthesis resumed successfully");
+                console.log("Speech synthesis resumed successfully from position:", currentWordPosition);
               } else {
                 console.warn("Resume failed - speech still paused or stopped");
               }
@@ -425,12 +443,12 @@ export function useAudio() {
             return true;
           }
         } else {
-          // Se não está falando, não pode retomar
-          console.log("Speech was completely stopped, cannot resume");
+          // Se não está falando, tentar retomar da posição atual
+          console.log("Speech was stopped, restarting from current position:", currentWordPosition);
           setIsPaused(false);
           setIsPlaying(false);
           setCurrentUtterance(null);
-          return false;
+          return false; // Signal that we need to restart from position
         }
       } catch (error) {
         console.error("Error in resumeAudio:", error);
@@ -442,14 +460,15 @@ export function useAudio() {
       console.warn("Cannot resume - invalid state:", {
         hasUtterance: !!currentUtterance,
         isPaused,
-        isPlaying
+        isPlaying,
+        isStopped
       });
       return false;
     }
-  }, [currentUtterance, isPaused, isPlaying]);
+  }, [currentUtterance, isPaused, isPlaying, currentWordPosition, isStopped]);
 
   const stopAudio = useCallback(() => {
-    console.log("stopAudio called");
+    console.log("stopAudio called - full reset");
     cleanup();
     speechSynthesis.cancel();
     setIsPlaying(false);
@@ -457,6 +476,8 @@ export function useAudio() {
     setCurrentUtterance(null);
     setCurrentText("");
     setRemainingText("");
+    setCurrentWordPosition(0);
+    setIsStopped(true);
   }, [cleanup]);
 
   return { 
@@ -468,6 +489,8 @@ export function useAudio() {
     isPaused,
     currentText,
     remainingText,
-    currentUtterance 
+    currentUtterance,
+    currentWordPosition,
+    isStopped
   };
 }
