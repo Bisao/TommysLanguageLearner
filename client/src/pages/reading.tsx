@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/header";
 import ReadingLessonRefactored from "@/components/reading-lesson-refactored";
+import { ReadingTipsPanel } from "@/components/reading-tips-panel";
+import { useReadingTips } from "@/hooks/use-reading-tips";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +15,7 @@ export default function Reading() {
   const [, setLocation] = useLocation();
   const [lessonCompleted, setLessonCompleted] = useState(false);
   const [audioControls, setAudioControls] = useState<React.ReactNode>(null);
+  const { showTips, showTipsPanel, hideTipsPanel } = useReadingTips();
   const [currentLessonData, setCurrentLessonData] = useState({
     title: "How Will We Eat in 2021?",
     text: `The pandemic has changed how we think about food. Many people are cooking more at home. Restaurants have had to adapt quickly. Food delivery services have become more popular than ever.
@@ -26,6 +29,15 @@ The environment is another important factor. More people want to eat sustainable
 Local food systems are also getting more attention. Community gardens are expanding. Farmers markets are adapting to new safety requirements. People want to know where their food comes from.
 
 These trends suggest that the future of food will be more diverse, more sustainable, and more connected to technology than ever before.`
+  });
+
+  // Mostrar painel de dicas automaticamente após 2 segundos
+  useState(() => {
+    const timer = setTimeout(() => {
+      showTipsPanel();
+    }, 2000);
+    
+    return () => clearTimeout(timer);
   });
 
   const { data: user } = useQuery({
@@ -164,36 +176,12 @@ These trends suggest that the future of food will be more diverse, more sustaina
           />
         </motion.div>
 
-        {/* Floating Tips */}
-        <AnimatePresence>
-          <motion.div
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 100 }}
-            transition={{ delay: 1.5, duration: 0.5 }}
-            className="fixed right-4 top-1/2 transform -translate-y-1/2 z-40 hidden lg:block"
-          >
-            <Card className="w-64 border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-xl">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Sparkles className="w-4 h-4 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-blue-800 text-sm mb-2">
-                      💡 Dicas de Leitura
-                    </h3>
-                    <ul className="text-xs text-blue-700 space-y-1">
-                      <li>• Clique nas palavras para ouvir</li>
-                      <li>• Use o modo de leitura guiada</li>
-                      <li>• Pratique a pronúncia</li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </AnimatePresence>
+        {/* Reading Tips Panel */}
+        <ReadingTipsPanel 
+          isVisible={showTips}
+          onClose={hideTipsPanel}
+          autoHideDelay={5000}
+        />
       </main>
     </div>
   );
