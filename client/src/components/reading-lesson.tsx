@@ -75,23 +75,14 @@ export default function ReadingLesson({
 
   const isSupported = 'speechSynthesis' in window;
 
-  // Função para dividir texto em palavras, preservando pontuação separada
+  // Função para dividir texto em palavras, mantendo pontuação junto com a palavra
   const splitTextIntoWords = (inputText: string): string[] => {
     return inputText.split(/\s+/)
       .filter(word => word.length > 0)
-      .flatMap(word => {
-        // Preservar palavras com números, apóstrofes e hífens
-        if (/^[a-zA-Z0-9''\-]+$/.test(word)) {
-          return [word];
-        }
-        
-        // Separar pontuação no final
-        const match = word.match(/^([a-zA-Z0-9''\-]+)([.!?;:,]+)$/);
-        if (match && match[1] && match[2]) {
-          return [match[1], ...match[2].split('')];
-        }
-        
-        return [word];
+      .map(word => {
+        // Manter a palavra com sua pontuação anexa
+        // Não separar pontuação - ela ficará destacada junto com a palavra
+        return word;
       })
       .filter(word => word.length > 0);
   };
