@@ -131,6 +131,16 @@
   [data-radix-dropdown-menu-content] {
     z-index: 30 !important;
   }
+
+  /* Garantir que o header tenha prioridade máxima */
+  header {
+    z-index: 99999 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+  }
 }
 
 @layer components {
