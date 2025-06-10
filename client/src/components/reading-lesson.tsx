@@ -74,15 +74,7 @@ export default function ReadingLesson({
     if (isSupported) {
       playText(word);
       setCurrentWordIndex(index);
-      
-      // Marcar palavra clicada e todas as anteriores como lidas
-      setCompletedWords(prev => {
-        const newSet = new Set(prev);
-        for (let i = 0; i <= index; i++) {
-          newSet.add(i);
-        }
-        return newSet;
-      });
+      setCompletedWords(prev => new Set(prev).add(index));
     }
   }, [playText, isSupported]);
 
@@ -97,21 +89,7 @@ export default function ReadingLesson({
       if (shouldHighlight) {
         console.log(`[ReadingLesson] Destacando palavra ${wordIndex}: "${word}"`);
         setCurrentWordIndex(wordIndex);
-        
-        // Sempre marcar palavra como lida quando highlighted
-        setCompletedWords(prev => {
-          const newSet = new Set(prev);
-          newSet.add(wordIndex);
-          
-          // Durante resume, marcar todas as palavras até a posição atual como lidas
-          if (fromPosition > 0) {
-            for (let i = 0; i <= wordIndex; i++) {
-              newSet.add(i);
-            }
-          }
-          
-          return newSet;
-        });
+        setCompletedWords(prev => new Set(prev).add(wordIndex));
       }
     });
   }, [text, playText]);
@@ -124,19 +102,11 @@ export default function ReadingLesson({
 
     if (isPlaying) {
       // Pausar reprodução atual
-      console.log(`[ReadingLesson] Pausando reprodução na palavra ${currentWordPosition}`);
+      console.log(`[ReadingLesson] Pausando reprodução`);
       pauseAudio();
       setIsPlaying(false);
-      
-      // Marcar todas as palavras até a posição atual como lidas quando pausar
-      setCompletedWords(prev => {
-        const newSet = new Set(prev);
-        for (let i = 0; i < currentWordPosition; i++) {
-          newSet.add(i);
-        }
-        return newSet;
-      });
-      
+      // Manter highlighting da palavra atual durante pausa
+      // setCurrentWordIndex(-1); // Removido para manter contexto visual
     } else if (isPaused && !isStopped) {
       // Tentar resumir da posição pausada
       console.log(`[ReadingLesson] Tentando resumir da posição ${currentWordPosition}`);
@@ -146,15 +116,6 @@ export default function ReadingLesson({
         // Se resume falhou, reiniciar da posição atual
         console.log(`[ReadingLesson] Resume falhou - reiniciando da posição ${currentWordPosition}`);
         setCurrentWordIndex(currentWordPosition);
-        
-        // Garantir que palavras anteriores estejam marcadas como lidas
-        setCompletedWords(prev => {
-          const newSet = new Set(prev);
-          for (let i = 0; i < currentWordPosition; i++) {
-            newSet.add(i);
-          }
-          return newSet;
-        });
         
         if (readingMode === 'guided') {
           startGuidedReading(currentWordPosition);
@@ -170,17 +131,6 @@ export default function ReadingLesson({
       
       setIsPlaying(true);
       setCurrentWordIndex(startPosition);
-
-      // Se não começando do zero, marcar palavras anteriores como lidas
-      if (startPosition > 0) {
-        setCompletedWords(prev => {
-          const newSet = new Set(prev);
-          for (let i = 0; i < startPosition; i++) {
-            newSet.add(i);
-          }
-          return newSet;
-        });
-      }
 
       if (readingMode === 'guided') {
         startGuidedReading(startPosition);
