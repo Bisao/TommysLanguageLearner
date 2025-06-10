@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,13 @@ import {
   MicOff,
   CheckCircle2,
   Target,
-  Sparkles
+  Sparkles,
+  Eye,
+  ChevronRight
 } from "lucide-react";
 import { useReadingGuide } from "@/hooks/use-reading-guide";
+import { useAudio } from "@/hooks/use-audio";
+import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 
 interface ReadingLessonProps {
   title: string;
@@ -74,7 +78,7 @@ export default function ReadingLesson({
   const splitTextIntoWords = (inputText: string): string[] => {
     // Primeiro, normalizar espaços e quebras de linha
     const normalizedText = inputText.replace(/\s+/g, ' ').trim();
-    
+
     // Dividir por espaços, mantendo pontuação anexa às palavras
     return normalizedText.split(/\s+/)
       .filter(word => word.length > 0)
@@ -89,41 +93,41 @@ export default function ReadingLesson({
   // Função para identificar linking sounds comuns em inglês
   const hasLinkingSound = (currentWord: string, nextWord: string): boolean => {
     if (!currentWord || !nextWord) return false;
-    
+
     // Limpar pontuação mas manter a palavra original para análise
     const currentClean = currentWord.toLowerCase().replace(/[^\w]/g, '');
     const nextClean = nextWord.toLowerCase().replace(/[^\w]/g, '');
     const currentOriginal = currentWord.toLowerCase();
     const nextOriginal = nextWord.toLowerCase();
-    
+
     console.log(`[LinkingSound] Analisando: "${currentWord}" + "${nextWord}" | Clean: "${currentClean}" + "${nextClean}"`);
-    
+
     // Casos especiais para números e pontuação
     const currentEndsWithNumber = /\d$/.test(currentClean);
     const currentHasPunctuation = /[.!?;:,]/.test(currentOriginal);
-    
+
     // Consonant to vowel linking (mais comum)
     const currentEndsWithConsonant = /[bcdfghjklmnpqrstvwxyz]$/i.test(currentClean);
     const nextStartsWithVowel = /^[aeiou]/i.test(nextClean);
-    
+
     // Vowel to vowel linking 
     const currentEndsWithVowel = /[aeiou]$/i.test(currentClean);
-    
+
     // R-linking (when word ends in 'r' sound)
     const rLinking = /r$/i.test(currentClean) && /^[aeiou]/i.test(nextClean);
-    
+
     // S-linking (plural/possessive linking)
     const sLinking = /s$/i.test(currentClean) && /^[aeiou]/i.test(nextClean);
-    
+
     // T/D linking (past tense and numbers)
     const tLinking = /[td]$/i.test(currentClean) && /^[aeiou]/i.test(nextClean);
-    
+
     // N-linking (articles, conjunctions)
     const nLinking = /n$/i.test(currentClean) && /^[aeiou]/i.test(nextClean);
-    
+
     // Casos especiais de números como "2021"
     const numberLinking = currentEndsWithNumber && /^[aeiou]/i.test(nextClean);
-    
+
     const hasLinking = (currentEndsWithConsonant && nextStartsWithVowel) || 
                       (currentEndsWithVowel && nextStartsWithVowel) || 
                       rLinking || 
@@ -131,11 +135,11 @@ export default function ReadingLesson({
                       tLinking || 
                       nLinking ||
                       numberLinking;
-    
+
     if (hasLinking) {
       console.log(`[LinkingSound] ✓ LINKING ENCONTRADO: "${currentWord}" → "${nextWord}"`);
     }
-    
+
     return hasLinking;
   };
 
@@ -145,7 +149,7 @@ export default function ReadingLesson({
   const textWords = splitTextIntoWords(text);
   const allWords = [...titleWords, ...textWords]; // Incluir palavras do título
   const totalWords = allWords.length;
-  
+
   // Debug: Log das palavras processadas
   console.log('[WordProcessing] Título dividido em:', titleWords);
   console.log('[WordProcessing] Texto dividido em:', textWords.slice(0, 20), '... (primeiras 20)');
@@ -164,15 +168,15 @@ export default function ReadingLesson({
     const normalize = (str: string) => str.toLowerCase().replace(/[.,!?;:]/g, '').trim();
     const spokenNorm = normalize(spoken);
     const targetNorm = normalize(target);
-    
+
     if (spokenNorm === targetNorm) return 1.0;
-    
+
     // Levenshtein distance adaptado para pronúncia
     const matrix = Array(spokenNorm.length + 1).fill(null).map(() => Array(targetNorm.length + 1).fill(0));
-    
+
     for (let i = 0; i <= spokenNorm.length; i++) matrix[i][0] = i;
     for (let j = 0; j <= targetNorm.length; j++) matrix[0][j] = j;
-    
+
     for (let i = 1; i <= spokenNorm.length; i++) {
       for (let j = 1; j <= targetNorm.length; j++) {
         const cost = spokenNorm[i - 1] === targetNorm[j - 1] ? 0 : 1;
@@ -183,74 +187,128 @@ export default function ReadingLesson({
         );
       }
     }
-    
+
     const distance = matrix[spokenNorm.length][targetNorm.length];
     const maxLength = Math.max(spokenNorm.length, targetNorm.length);
     return maxLength > 0 ? 1 - (distance / maxLength) : 0;
   }, []);
 
+    // Função para analisar similaridade de palavras
+    const calculateSimilarity = useCallback((word1: string, word2: string) => {
+        const longer = word1.length > word2.length ? word1 : word2;
+        const shorter = word1.length > word2.length ? word2 : word1;
+        const longerLength = longer.length;
+        if (longerLength === 0) {
+            return 1.0;
+        }
+        return (longerLength - editDistance(longer, shorter)) / parseFloat(longerLength + "");
+    }, []);
+
+    // Função para calcular a distância de edição (Levenshtein distance) entre duas strings
+    function editDistance(s1: string, s2: string) {
+        s1 = s1.toLowerCase();
+        s2 = s2.toLowerCase();
+
+        const costs = new Array();
+        for (let i = 0; i <= s1.length; i++) {
+            let lastValue = i;
+            for (let j = 0; j <= s2.length; j++) {
+                if (i === 0)
+                    costs[j] = j;
+                else {
+                    if (j > 0) {
+                        let newValue = costs[j - 1];
+                        if (s1.charAt(i - 1) !== s2.charAt(j - 1))
+                            newValue = Math.min(newValue, lastValue,
+                                costs[j]) + 1;
+                        costs[j - 1] = lastValue;
+                        lastValue = newValue;
+                    }
+                }
+            }
+            if (i > 0)
+                costs[s2.length] = lastValue;
+        }
+        return costs[s2.length];
+    }
+  
+
   // Função para analisar pronúncia apenas quando há nova fala
   const analyzePronunciation = useCallback((finalTranscript: string, isNewSpeech: boolean = false) => {
     if (!finalTranscript.trim() || readingMode !== 'practice' || !isNewSpeech) return;
-    
+
     console.log('[PronunciationAnalysis] Nova fala detectada, analisando:', finalTranscript);
     setIsAnalyzing(true);
-    
+
     const spokenWords = finalTranscript.toLowerCase().split(/\s+/).filter(w => w.length > 0);
     // Usar a mesma função de divisão para manter consistência
     const targetWords = allWords.map(w => w.toLowerCase().replace(/[.,!?;:]/g, ''));
-    
+
     // Encontrar a próxima palavra não completada
     let currentPosition = 0;
     while (currentPosition < targetWords.length && completedWords.has(currentPosition)) {
       currentPosition++;
     }
-    
+
     console.log('[PronunciationAnalysis] Posição inicial para análise:', currentPosition);
     console.log('[PronunciationAnalysis] Palavras alvo:', targetWords.slice(currentPosition, currentPosition + 5));
-    
+
     // Analisar apenas as palavras novas faladas
     for (let i = 0; i < spokenWords.length && currentPosition < targetWords.length; i++) {
       const spokenWord = spokenWords[i];
       const targetWord = targetWords[currentPosition];
-      
+
       // Pular pontuação isolada
       if (/^[.,!?;:]+$/.test(targetWord) && targetWord.length <= 2) {
         console.log(`[PronunciationAnalysis] Pulando pontuação: "${targetWord}"`);
-        setCompletedWords(prev => new Set(prev).add(currentPosition));
         currentPosition++;
         continue;
       }
-      
-      const similarity = calculateWordSimilarity(spokenWord, targetWord);
-      
-      console.log(`[PronunciationAnalysis] Palavra ${currentPosition}: "${spokenWord}" vs "${targetWord}" = ${similarity.toFixed(2)}`);
-      
-      if (similarity > 0.6) {
-        let status: 'correct' | 'close' | 'incorrect';
-        if (similarity >= 0.9) {
-          status = 'correct';
-        } else if (similarity >= 0.75) {
-          status = 'close';
-        } else {
-          status = 'incorrect';
-        }
-        
-        console.log(`[PronunciationAnalysis] ✓ Palavra aceita: "${spokenWord}" → "${targetWord}" (${status})`);
-        
-        // Marcar palavra e avançar
-        setPronunciationScores(prev => new Map(prev).set(currentPosition, { status, score: similarity }));
-        setCompletedWords(prev => new Set(prev).add(currentPosition));
-        setCurrentWordIndex(currentPosition + 1);
-        currentPosition++;
+
+      console.log(`[PronunciationAnalysis] Comparando: "${spokenWord}" vs "${targetWord}"`);
+
+      // Calcular similaridade usando Levenshtein
+      const similarity = calculateSimilarity(spokenWord, targetWord);
+      let status: 'correct' | 'close' | 'incorrect';
+
+      if (similarity >= 0.9) {
+        status = 'correct';
+      } else if (similarity >= 0.7) {
+        status = 'close';
       } else {
-        console.log(`[PronunciationAnalysis] ✗ Palavra rejeitada: "${spokenWord}" vs "${targetWord}"`);
-        break; // Parar na primeira palavra não reconhecida
+        status = 'incorrect';
       }
+
+      // Atualizar scores e palavras completadas
+      setPronunciationScores(prev => new Map(prev).set(currentPosition, {
+        score: similarity,
+        status,
+        spokenWord,
+        targetWord: allWords[currentPosition]
+      }));
+
+      // Se pronunciou bem (>= 70%), marcar como completada
+      if (similarity >= 0.7) {
+        setCompletedWords(prev => new Set(prev).add(currentPosition));
+        console.log(`[PronunciationAnalysis] Palavra ${currentPosition} completada: "${targetWord}" (${Math.round(similarity * 100)}%)`);
+      }
+
+      currentPosition++;
     }
-    
+
+    // Forçar atualização do currentWordIndex após análise
+    setTimeout(() => {
+      let nextWord = 0;
+      while (nextWord < allWords.length && completedWords.has(nextWord)) {
+        nextWord++;
+      }
+      if (nextWord !== currentWordIndex) {
+        setCurrentWordIndex(nextWord);
+      }
+    }, 100);
+
     setIsAnalyzing(false);
-  }, [readingMode, allWords, completedWords, calculateWordSimilarity]);
+  }, [allWords, completedWords, readingMode, currentWordIndex, calculateSimilarity]);
 
   const startGuidedReading = useCallback((fromPosition: number = 0) => {
     // Prevenir múltiplas chamadas simultâneas
@@ -258,21 +316,21 @@ export default function ReadingLesson({
       console.log(`[ReadingLesson] Reprodução já ativa - ignorando nova chamada`);
       return;
     }
-    
+
     console.log(`[ReadingLesson] Iniciando leitura guiada da posição ${fromPosition}`);
     setPendingPause(false);
-    
+
     const fullText = `${title}. ${text}`;
     playText(fullText, 'en-US', fromPosition, (word: string, wordIndex: number) => {
       console.log(`[ReadingLesson] Destacando palavra ${wordIndex}: "${word}"`);
-      
+
       // Sempre destacar a palavra atual
       setCurrentWordIndex(wordIndex);
-      
+
       // Marcar palavra como lida
       setCompletedWords(prev => new Set(prev).add(wordIndex));
       setLastCompletedWordIndex(wordIndex);
-      
+
       // Scroll para a palavra atual
       setTimeout(() => {
         const wordElement = document.querySelector(`[data-word-index="${wordIndex}"]`);
@@ -283,7 +341,7 @@ export default function ReadingLesson({
           });
         }
       }, 50);
-      
+
       // Verificar se há pausa pendente após completar uma palavra
       if (pendingPause) {
         console.log(`[ReadingLesson] Executando pausa suave após palavra ${wordIndex}`);
@@ -315,9 +373,9 @@ export default function ReadingLesson({
       // Retomar da próxima palavra após a última completada
       const resumePosition = Math.max(0, lastCompletedWordIndex + 1);
       console.log(`[ReadingLesson] Retomando da palavra ${resumePosition} (próxima após ${lastCompletedWordIndex})`);
-      
+
       const resumed = resumeAudio();
-      
+
       if (resumed) {
         setIsPlaying(true);
       } else {
@@ -331,7 +389,7 @@ export default function ReadingLesson({
       // Iniciar do começo ou posição atual
       const startPosition = isStopped ? 0 : Math.max(0, lastCompletedWordIndex >= 0 ? lastCompletedWordIndex + 1 : 0);
       console.log(`[ReadingLesson] Iniciando nova reprodução da posição ${startPosition}`);
-      
+
       setIsPlaying(true);
       setCurrentWordIndex(startPosition);
 
@@ -378,15 +436,15 @@ export default function ReadingLesson({
     setPendingPause(false);
     setLastCompletedWordIndex(-1);
     setLastProcessedTranscript('');
-    
+
     // Ensure word highlighting is cleared
     setTimeout(() => {
       setCurrentWordIndex(-1);
     }, 100);
-    
+
     stopListening();
     resetTranscript();
-    
+
     console.log('[ReadingLesson] Reset completo realizado');
   }, [stopAudio, stopListening, resetTranscript]);
 
@@ -433,7 +491,7 @@ export default function ReadingLesson({
 
   // Controlar quando analisar pronúncia - apenas em mudanças de transcript final
   const [lastProcessedTranscript, setLastProcessedTranscript] = useState('');
-  
+
   useEffect(() => {
     if (transcript && readingMode === 'practice' && isListening && transcript !== lastProcessedTranscript) {
       console.log('[PronunciationControl] Nova fala detectada:', { old: lastProcessedTranscript, new: transcript });
@@ -667,20 +725,19 @@ export default function ReadingLesson({
                 <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">
                   {title.split(' ').map((word, wordIndex) => {
                     const globalIndex = wordIndex;
-                    const isCurrentWord = globalIndex === currentWordIndex && currentWordIndex >= 0;
+                    const isCurrentWord = globalIndex === currentWordIndex;
                     const isCompleted = completedWords.has(globalIndex);
                     const pronunciationFeedback = pronunciationScores.get(globalIndex);
-                    const isNextToRead = readingMode === 'practice' && globalIndex === currentWordIndex && currentWordIndex >= 0;
 
-                    let wordClassName = '';
+                    // Definir className base
+                    let wordClassName = 'px-2 py-1 rounded-md transition-all duration-300 cursor-pointer hover:bg-gray-100 inline-block mr-1 mb-1';
                     let wordTitle = `Palavra ${globalIndex + 1}: ${word}`;
 
-                    if (isNextToRead && !isCompleted) {
-                      wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 animate-pulse border-2 border-blue-600';
-                    } else if (pronunciationFeedback) {
+                    // Prioridade: 1. Feedback de pronúncia, 2. Palavra atual (se não completada), 3. Estado padrão
+                    if (pronunciationFeedback) {
                       const scorePercentage = Math.round(pronunciationFeedback.score * 100);
                       wordTitle += ` - Pronúncia: ${pronunciationFeedback.status === 'correct' ? 'Excelente' : pronunciationFeedback.status === 'close' ? 'Boa' : 'Precisa melhorar'} (${scorePercentage}%)`;
-                      
+
                       switch (pronunciationFeedback.status) {
                         case 'correct':
                           wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-bold border-2 border-green-300 shadow-md';
@@ -692,8 +749,13 @@ export default function ReadingLesson({
                           wordClassName = 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 font-medium border-2 border-red-300 shadow-md';
                           break;
                       }
-                    } else if (isCurrentWord && readingMode === 'guided' && audioIsPlaying) {
-                      wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 border-2 border-blue-300';
+                    } else if (isCurrentWord && (readingMode === 'guided' || (readingMode === 'practice' && isListening && !isCompleted))) {
+                      // Highlight especial para palavra atual durante prática de pronúncia
+                      if (readingMode === 'practice' && isListening) {
+                        wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 animate-pulse border-2 border-blue-600';
+                      } else {
+                        wordClassName = 'bg-gradient-to-r from-cartoon-yellow to-orange-400 text-white font-bold shadow-lg transform scale-105 border-2 border-orange-300';
+                      }
                     } else if (isCompleted) {
                       wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-medium border border-green-300';
                     } else {
@@ -719,7 +781,7 @@ export default function ReadingLesson({
                       </span>
                     );
                   })}
-                </h2>
+                                </h2>
               </div>
 
               {/* Parágrafos do texto */}
@@ -729,44 +791,28 @@ export default function ReadingLesson({
                   // Calcular índice global incluindo palavras do título
                   const titleWordsCount = titleWords.length;
                   let globalIndex = titleWordsCount; // Começar após as palavras do título
-                  
+
                   // Somar palavras dos parágrafos anteriores
                   for (let i = 0; i < pIndex; i++) {
                     globalIndex += splitTextIntoWords(paragraphs[i]).length;
                   }
                   globalIndex += wordIndex;
-                  
+
                   console.log(`[WordMapping] Parágrafo ${pIndex}, palavra ${wordIndex}: "${word}" → índice global ${globalIndex}`);
 
-                  const isCurrentWord = globalIndex === currentWordIndex && currentWordIndex >= 0;
+                  const isCurrentWord = globalIndex === currentWordIndex;
                   const isCompleted = completedWords.has(globalIndex);
                   const pronunciationFeedback = pronunciationScores.get(globalIndex);
-                  const isNextToRead = readingMode === 'practice' && globalIndex === currentWordIndex && currentWordIndex >= 0;
-                  
-                  // Verificar linking sound com a próxima palavra e palavra anterior
-                  const paragraphWords = splitTextIntoWords(paragraph);
-                  const nextWord = wordIndex < paragraphWords.length - 1 ? paragraphWords[wordIndex + 1] : null;
-                  const previousWord = wordIndex > 0 ? paragraphWords[wordIndex - 1] : null;
-                  const hasLinking = nextWord && hasLinkingSound(word, nextWord);
-                  const completesLinking = previousWord && hasLinkingSound(previousWord, word);
 
-                  let wordClassName = '';
+                  // Definir className base
+                  let wordClassName = 'px-2 py-1 rounded-md transition-all duration-300 cursor-pointer hover:bg-gray-100 inline-block mr-1 mb-1';
                   let wordTitle = `Palavra ${globalIndex + 1}: ${word}`;
-                  
-                  // Adicionar informação sobre linking sound no título
-                  if (hasLinking) {
-                    wordTitle += ` - Conecta com a próxima palavra (linking sound)`;
-                  }
-                  if (completesLinking) {
-                    wordTitle += ` - Completa linking sound da palavra anterior`;
-                  }
 
-                  if (isNextToRead && !isCompleted) {
-                    wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 animate-pulse border-2 border-blue-600';
-                  } else if (pronunciationFeedback) {
+                  // Prioridade: 1. Feedback de pronúncia, 2. Palavra atual (se não completada), 3. Estado padrão
+                  if (pronunciationFeedback) {
                     const scorePercentage = Math.round(pronunciationFeedback.score * 100);
                     wordTitle += ` - Pronúncia: ${pronunciationFeedback.status === 'correct' ? 'Excelente' : pronunciationFeedback.status === 'close' ? 'Boa' : 'Precisa melhorar'} (${scorePercentage}%)`;
-                    
+
                     switch (pronunciationFeedback.status) {
                       case 'correct':
                         wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-bold border-2 border-green-300 shadow-md';
@@ -778,42 +824,17 @@ export default function ReadingLesson({
                         wordClassName = 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 font-medium border-2 border-red-300 shadow-md';
                         break;
                     }
-                  } else if (isCurrentWord && readingMode === 'guided' && audioIsPlaying) {
-                    // Destacar linking sounds com cor especial quando é a palavra atual
-                    if (hasLinking && completesLinking) {
-                      // Palavra que inicia E completa linking sound
-                      wordClassName = 'bg-gradient-to-r from-orange-400 to-pink-500 text-white font-bold shadow-xl transform scale-110 border-2 border-orange-300 animate-pulse';
-                    } else if (hasLinking) {
-                      // Palavra que inicia linking sound (borda esquerda laranja)
-                      wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 border-l-4 border-orange-400 border-t-2 border-b-2 border-r-2 border-blue-300';
-                    } else if (completesLinking) {
-                      // Palavra que completa linking sound (borda direita laranja)
-                      wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 border-r-4 border-orange-400 border-t-2 border-b-2 border-l-2 border-blue-300';
+                  } else if (isCurrentWord && (readingMode === 'guided' || (readingMode === 'practice' && isListening && !isCompleted))) {
+                    // Highlight especial para palavra atual durante prática de pronúncia
+                    if (readingMode === 'practice' && isListening) {
+                      wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 animate-pulse border-2 border-blue-600';
                     } else {
-                      wordClassName = 'bg-gradient-to-r from-blue-400 to-purple-500 text-white font-bold shadow-xl transform scale-110 border-2 border-blue-300';
+                      wordClassName = 'bg-gradient-to-r from-cartoon-yellow to-orange-400 text-white font-bold shadow-lg transform scale-105 border-2 border-orange-300';
                     }
                   } else if (isCompleted) {
-                    // Manter destaque sutil para linking sounds mesmo após completadas
-                    if (hasLinking && completesLinking) {
-                      wordClassName = 'bg-gradient-to-r from-orange-50 to-pink-50 text-orange-800 font-medium border-2 border-orange-200 shadow-sm';
-                    } else if (hasLinking) {
-                      wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-medium border border-green-300 border-l-2 border-l-orange-200';
-                    } else if (completesLinking) {
-                      wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-medium border border-green-300 border-r-2 border-r-orange-200';
-                    } else {
-                      wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-medium border border-green-300';
-                    }
+                    wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-medium border border-green-300';
                   } else {
-                    // Destaque sutil para linking sounds não lidas
-                    if (hasLinking && completesLinking) {
-                      wordClassName = 'hover:bg-orange-50 hover:shadow-md text-gray-700 border-2 border-orange-200';
-                    } else if (hasLinking) {
-                      wordClassName = 'hover:bg-gray-100 hover:shadow-md text-gray-700 border-l-2 border-orange-200';
-                    } else if (completesLinking) {
-                      wordClassName = 'hover:bg-gray-100 hover:shadow-md text-gray-700 border-r-2 border-orange-200';
-                    } else {
-                      wordClassName = 'hover:bg-gray-100 hover:shadow-md text-gray-700';
-                    }
+                    wordClassName = 'hover:bg-gray-100 hover:shadow-md text-gray-800';
                   }
 
                   return (
@@ -859,7 +880,7 @@ export default function ReadingLesson({
                       </div>
                     )}
                   </div>
-                  
+
                   {(transcript || interimTranscript) && (
                     <div className="space-y-2">
                       <div className="text-gray-700 bg-white p-3 rounded border">
@@ -876,7 +897,7 @@ export default function ReadingLesson({
                           {interimTranscript && <span className="text-gray-500 italic"> {interimTranscript}</span>}
                         </div>
                       </div>
-                      
+
                       {pronunciationScores.size > 0 && (
                         <div className="bg-white p-3 rounded border">
                           <strong className="text-blue-700 block mb-2">Feedback de Pronúncia:</strong>
@@ -904,7 +925,7 @@ export default function ReadingLesson({
                       )}
                     </div>
                   )}
-                  
+
                   <div className="mt-3 text-sm text-blue-600">
                     💡 <strong>Dica:</strong> Leia em voz alta seguindo o texto. As palavras ficarão coloridas conforme sua pronúncia.
                   </div>
