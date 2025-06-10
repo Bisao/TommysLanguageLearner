@@ -41,7 +41,7 @@ export default function ReadingLesson({
   const [currentWordIndex, setCurrentWordIndex] = useState(-1);
   const [readingProgress, setReadingProgress] = useState(0);
   const [isListening, setIsListening] = useState(false);
-  const [readingMode, setReadingMode] = useState<'normal' | 'guided' | 'practice'>('normal');
+  const [readingMode, setReadingMode] = useState<'guided' | 'practice'>('guided');
   const [completedWords, setCompletedWords] = useState<Set<number>>(new Set());
   const [showTranslation, setShowTranslation] = useState(false);
 
@@ -117,11 +117,7 @@ export default function ReadingLesson({
         console.log(`[ReadingLesson] Resume falhou - reiniciando da posição ${currentWordPosition}`);
         setCurrentWordIndex(currentWordPosition);
         
-        if (readingMode === 'guided') {
-          startGuidedReading(currentWordPosition);
-        } else {
-          playText(text, 'en-US', currentWordPosition);
-        }
+        startGuidedReading(currentWordPosition);
       }
       setIsPlaying(true);
     } else {
@@ -132,11 +128,7 @@ export default function ReadingLesson({
       setIsPlaying(true);
       setCurrentWordIndex(startPosition);
 
-      if (readingMode === 'guided') {
-        startGuidedReading(startPosition);
-      } else {
-        playText(text, 'en-US', startPosition);
-      }
+      startGuidedReading(startPosition);
     }
   }, [isPlaying, isPaused, isStopped, readingMode, text, playText, pauseAudio, resumeAudio, startGuidedReading, currentWordPosition]);
 
@@ -273,7 +265,6 @@ export default function ReadingLesson({
               </h3>
               <div className="space-y-2">
                 {[
-                  { key: 'normal', label: 'Normal', icon: BookOpen },
                   { key: 'guided', label: 'Guiada', icon: Headphones },
                   { key: 'practice', label: 'Prática', icon: Mic }
                 ].map(({ key, label, icon: Icon }) => (
@@ -326,7 +317,7 @@ export default function ReadingLesson({
                 ) : (
                   <>
                     <Play className="w-4 h-4 mr-2" />
-                    {readingMode === 'guided' ? 'Leitura Guiada' : 'Reproduzir'}
+                    Leitura Guiada
                   </>
                 )}
               </Button>
