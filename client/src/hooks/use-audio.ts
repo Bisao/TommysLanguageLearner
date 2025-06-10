@@ -190,7 +190,7 @@ export function useAudio() {
           const globalWordIndex = fromPosition + wordIndex;
           currentWordIndex = wordIndex + 1;
           
-          // Update current word position for resume functionality
+          // Update current word position for accurate resume
           setCurrentWordPosition(globalWordIndex + 1);
           console.log(`Boundary event highlighting word ${globalWordIndex}: "${words[wordIndex] || ''}"`);
           onWordBoundary(words[wordIndex] || '', globalWordIndex);
@@ -246,7 +246,11 @@ export function useAudio() {
         // Tratamento específico para diferentes tipos de erro
         if (event.error === 'interrupted') {
           console.log("Speech interrupted (expected during pause/resume)");
-          // NÃO limpar estados durante interrupções esperadas
+          // Durante interrupção esperada, manter o estado pausado se estivermos pausando
+          if (isPaused) {
+            setIsPlaying(false);
+            setIsPaused(true);
+          }
           return;
         } else if (event.error === 'canceled') {
           console.log("Speech canceled");
@@ -381,11 +385,11 @@ export function useAudio() {
             setIsPlaying(false);
             console.log("Speech synthesis paused successfully at position:", currentWordPosition);
           } else {
-            console.warn("Pause failed, using cancel fallback");
+            console.log("Pause not supported on this device, using cancel with position tracking");
             speechSynthesis.cancel();
-            setIsPaused(false);
+            setIsPaused(true);
             setIsPlaying(false);
-            setCurrentUtterance(null);
+            // Keep utterance and position for resume functionality
           }
         }, 50);
         
@@ -393,9 +397,9 @@ export function useAudio() {
         console.warn("Error pausing speech synthesis:", error);
         // Fallback para dispositivos que não suportam pause
         speechSynthesis.cancel();
-        setIsPaused(false);
+        setIsPaused(true);
         setIsPlaying(false);
-        setCurrentUtterance(null);
+        // Keep position for resume functionality
       }
     } else if (speechSynthesis.speaking && speechSynthesis.paused) {
       // Já está pausado
