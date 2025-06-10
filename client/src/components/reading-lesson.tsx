@@ -584,7 +584,7 @@ export default function ReadingLesson({
             >
               {/* Título como parte do texto a ser lido */}
               <div className="text-center mb-6">
-                <h2 className="text-2xl sm:text-3xl gradient-text-reading font-bold">
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4">
                   {title.split(' ').map((word, wordIndex) => {
                     const globalIndex = wordIndex;
                     const isCurrentWord = globalIndex === currentWordIndex && currentWordIndex >= 0;
@@ -617,7 +617,7 @@ export default function ReadingLesson({
                     } else if (isCompleted) {
                       wordClassName = 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 font-medium border border-green-300';
                     } else {
-                      wordClassName = 'hover:bg-gray-100 hover:shadow-md';
+                      wordClassName = 'hover:bg-gray-100 hover:shadow-md text-gray-800';
                     }
 
                     return (
