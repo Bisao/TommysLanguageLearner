@@ -106,6 +106,6 @@ export default function Grammar() {
           onClose={closeLesson}
         />
       )}
-    </div>
+    </Layout>
   );
 }
