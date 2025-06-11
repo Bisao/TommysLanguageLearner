@@ -18,7 +18,7 @@ import tommyLogoPath from "@assets/Screenshot_2025-06-04_015828-removebg-preview
 const getPageName = (location: string): string => {
   const pageNames: Record<string, string> = {
     "/home": "Início",
-    "/lessons": "Lições",
+    "/lessons": "Aulas & Lições",
     "/reading": "Leitura",
     "/vocabulary": "Vocabulário",
     "/grammar": "Gramática",
@@ -122,7 +122,7 @@ export default function Header({ user, audioControls, showAudioControls, isReadi
                       <span className="hidden sm:inline ml-1">Voltar</span>
                     </Button>
                   )}
-                  <h1 className="text-sm sm:text-base lg:text-lg font-bold gradient-text">
+                  <h1 className="text-base sm:text-lg lg:text-xl font-bold gradient-text">
                     {isReadingPage ? "Lição de Leitura" : getPageName(location)}
                   </h1>
                 </div>
