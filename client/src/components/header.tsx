@@ -72,7 +72,7 @@ export default function Header({ user, audioControls, showAudioControls, isReadi
   if (!user) return null;
 
   return (
-    <header className="w-full h-16 sm:h-20 lg:h-24">
+    <header className="w-full h-16">
       <div className="h-full container-responsive">
         <div className="flex justify-between items-center h-full">
           {/* Mobile Navigation & Logo Section */}

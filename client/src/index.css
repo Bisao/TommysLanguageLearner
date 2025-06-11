@@ -562,7 +562,9 @@
   }
 }
 
-/* Header spacing utilities - não mais necessárias pois o padding está no body */
+/* Standardized header height utilities */
+.header-height { height: 4rem; }
+.content-top-padding { padding-top: 4rem; }
 
 /* Custom utility classes for cartoon theme */
 .text-cartoon-red { color: hsl(var(--cartoon-red)); }

@@ -41,7 +41,7 @@ export default function Layout({
       {/* Main Content - Enhanced responsive spacing */}
       <main className="relative w-full">
         {/* Content container with responsive padding */}
-        <div className="pt-14 sm:pt-16 md:pt-18 lg:pt-20 xl:pt-24 min-h-screen">
+        <div className="pt-16 min-h-screen">
           <div className="w-full max-w-none px-2 sm:px-4 md:px-6 lg:px-8 xl:px-12">
             <div className="py-2 sm:py-4 md:py-6 lg:py-8 pb-4 sm:pb-8 md:pb-12 lg:pb-16">
               <div className="w-full max-w-none overflow-hidden">
