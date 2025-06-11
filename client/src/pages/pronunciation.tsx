@@ -106,6 +106,6 @@ export default function Pronunciation() {
           onClose={closeLesson}
         />
       )}
-    </div>
+    </Layout>
   );
 }
