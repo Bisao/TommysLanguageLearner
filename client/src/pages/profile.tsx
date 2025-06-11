@@ -162,23 +162,20 @@ export default function Profile() {
   ];
 
   return (
-    <>
-      <Header user={user} />
-      <div className="min-h-screen bg-background pt-20 sm:pt-24 pb-4 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8"
-          >
-            <h1 className="text-3xl sm:text-4xl font-bold gradient-text mb-2">
-              Meu Perfil
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              Acompanhe seu progresso e conquistas no aprendizado
-            </p>
-          </motion.div>
+    <Layout user={user as any}>
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center mb-6 sm:mb-8"
+      >
+        <h1 className="heading-responsive font-bold gradient-text mb-3 sm:mb-4">
+          Meu Perfil
+        </h1>
+        <p className="text-responsive text-muted-foreground px-4">
+          Acompanhe seu progresso e conquistas no aprendizado
+        </p>
+      </motion.div>
 
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="grid w-full grid-cols-4 lg:w-96 mx-auto">
@@ -351,9 +348,7 @@ export default function Profile() {
               </Card>
             </TabsContent>
           </Tabs>
-        </div>
-      </div>
-    </>
+        </Layout>
   );
 }
               <CardHeader className="flex flex-row items-center justify-between">
