@@ -102,27 +102,10 @@ export default function Header({ user, audioControls, showAudioControls, isReadi
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: 0.2 }}
-                      className="space-y-1"
                     >
                       <h1 className="text-sm sm:text-base lg:text-lg font-bold gradient-text truncate">
                         Lição de Leitura
                       </h1>
-                      <div className="hidden lg:flex flex-wrap justify-center gap-2">
-                        <Badge className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-700 text-xs">
-                          <BookOpen className="w-3 h-3 mr-1" />
-                          {lessonTitle || "How Will We Eat in 2021?"}
-                        </Badge>
-                        <Badge className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 text-xs">
-                          <Clock className="w-3 h-3 mr-1" />
-                          15-20 min
-                        </Badge>
-                      </div>
-                      <div className="lg:hidden">
-                        <Badge className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 text-xs">
-                          <Clock className="w-3 h-3 mr-1" />
-                          15 min
-                        </Badge>
-                      </div>
                     </motion.div>
                   </div>
                 </motion.div>
