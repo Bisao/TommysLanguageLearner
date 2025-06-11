@@ -106,6 +106,6 @@ export default function Phrases() {
           onClose={closeLesson}
         />
       )}
-    </div>
+    </Layout>
   );
 }
