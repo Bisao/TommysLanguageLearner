@@ -14,6 +14,24 @@ import MobileNavigation from "@/components/mobile-navigation";
 import Mascot from "./mascot";
 import tommyLogoPath from "@assets/Screenshot_2025-06-04_015828-removebg-preview.png";
 
+// Function to get page name based on location
+const getPageName = (location: string): string => {
+  const pageNames: Record<string, string> = {
+    "/home": "Início",
+    "/lessons": "Lições",
+    "/reading": "Leitura",
+    "/vocabulary": "Vocabulário",
+    "/grammar": "Gramática",
+    "/exercises": "Exercícios",
+    "/pronunciation": "Pronúncia",
+    "/phrases": "Frases",
+    "/profile": "Perfil",
+    "/reference": "Referência"
+  };
+  
+  return pageNames[location] || "Tommy's Academy";
+};
+
 interface HeaderProps {
   user?: {
     username: string;
@@ -81,54 +99,34 @@ export default function Header({ user, audioControls, showAudioControls, isReadi
 
             {/* Logo Section / Reading Lesson Navigation */}
             <div className="flex-1 min-w-0">
-              {isReadingPage ? (
-                <motion.div 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center min-w-0 flex-1"
-                >
-                  <Button 
-                    onClick={onGoBack}
-                    variant="ghost" 
-                    size="sm"
-                    className="touch-friendly text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-700/50 smooth-transition shrink-0"
-                  >
-                    <ArrowLeft size={16} className="sm:w-4 sm:h-4" />
-                    <span className="hidden sm:inline ml-1">Voltar</span>
-                  </Button>
-
-                  <div className="flex-1 text-center mx-2 min-w-0">
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.2 }}
+              <motion.div 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center space-x-2 sm:space-x-3 cursor-pointer touch-friendly"
+                onClick={() => setLocation("/home")}
+              >
+                <img 
+                  src={tommyLogoPath} 
+                  alt="Tommy's Academy Logo" 
+                  className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 object-contain"
+                />
+                <div className="flex items-center space-x-2">
+                  {isReadingPage && onGoBack && (
+                    <Button 
+                      onClick={onGoBack}
+                      variant="ghost" 
+                      size="sm"
+                      className="touch-friendly text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-700/50 smooth-transition"
                     >
-                      <h1 className="text-sm sm:text-base lg:text-lg font-bold gradient-text truncate">
-                        Lição de Leitura
-                      </h1>
-                    </motion.div>
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center space-x-2 sm:space-x-3 cursor-pointer touch-friendly"
-                  onClick={() => setLocation("/home")}
-                >
-                  <img 
-                    src={tommyLogoPath} 
-                    alt="Tommy's Academy Logo" 
-                    className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 object-contain"
-                  />
-                  <div className="hidden sm:block">
-                    <h1 className="text-base sm:text-lg lg:text-xl font-bold gradient-text">Tommy's Academy</h1>
-                  </div>
-                  <div className="sm:hidden">
-                    <h1 className="text-sm font-bold gradient-text">Tommy's</h1>
-                  </div>
-                </motion.div>
-              )}
+                      <ArrowLeft size={16} className="sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline ml-1">Voltar</span>
+                    </Button>
+                  )}
+                  <h1 className="text-sm sm:text-base lg:text-lg font-bold gradient-text">
+                    {isReadingPage ? "Lição de Leitura" : getPageName(location)}
+                  </h1>
+                </div>
+              </motion.div>
             </div>
           </div>
 
